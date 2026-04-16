@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── Entidades base ──────────────────────────────────────────────────────────
+
+model Restaurante {
+  id       Int     @id @default(autoincrement())
+  nome     String
+  telefone String  // somente dígitos, ex: 5565999998888
+  ativo    Boolean @default(true)
+  criadoEm DateTime @default(now())
+
+  pedidos Pedido[]
+}
+
+model Fazenda {
+  id       Int     @id @default(autoincrement())
+  nome     String
+  ativo    Boolean @default(true)
+  criadoEm DateTime @default(now())
+
+  turmas        Turma[]
+  requisitantes Requisitante[]
+  pedidos       Pedido[]
+}
+
+model Turma {
+  id        Int     @id @default(autoincrement())
+  nome      String
+  fazendaId Int
+  fazenda   Fazenda @relation(fields: [fazendaId], references: [id])
+  ativo     Boolean @default(true)
+  criadoEm  DateTime @default(now())
+
+  requisitantes Requisitante[]
+  pedidos       Pedido[]
+}
+
+model Requisitante {
+  id        Int    @id @default(autoincrement())
+  nome      String
+  login     String @unique
+  pinHash   String
+  role      Role   @default(REQUISITANTE)
+  fazendaId Int
+  fazenda   Fazenda @relation(fields: [fazendaId], references: [id])
+  turmaId   Int
+  turma     Turma   @relation(fields: [turmaId], references: [id])
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  pedidos        Pedido[]
+  versoesCriadas VersaoPedido[]
+}
+
+enum Role {
+  ADMIN
+  REQUISITANTE
+}
+
+// ─── Pedidos e versionamento ─────────────────────────────────────────────────
+
+// Pedido = envelope estável; ID nunca muda entre versões
+model Pedido {
+  id             Int    @id @default(autoincrement())
+  restauranteId  Int
+  restaurante    Restaurante @relation(fields: [restauranteId], references: [id])
+  fazendaId      Int
+  fazenda        Fazenda     @relation(fields: [fazendaId], references: [id])
+  turmaId        Int
+  turma          Turma       @relation(fields: [turmaId], references: [id])
+  requisitanteId Int
+  requisitante   Requisitante @relation(fields: [requisitanteId], references: [id])
+  versaoAtual    Int      @default(1)
+  status         Status   @default(ABERTO)
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  versoes VersaoPedido[]
+}
+
+enum Status {
+  ABERTO
+  ENVIADO
+  CONFIRMADO
+  CANCELADO
+}
+
+// VersaoPedido = snapshot imutável de uma versão
+model VersaoPedido {
+  id          Int    @id @default(autoincrement())
+  pedidoId    Int
+  pedido      Pedido       @relation(fields: [pedidoId], references: [id])
+  numero      Int
+  observacao  String?
+  criadoPorId Int
+  criadoPor   Requisitante @relation(fields: [criadoPorId], references: [id])
+  criadoEm   DateTime @default(now())
+
+  itens ItemRefeicao[]
+
+  @@unique([pedidoId, numero])
+}
+
+// ItemRefeicao pertence à versão, não ao pedido — garante histórico fiel
+model ItemRefeicao {
+  id             Int          @id @default(autoincrement())
+  versaoPedidoId Int
+  versaoPedido   VersaoPedido @relation(fields: [versaoPedidoId], references: [id])
+  tipoRefeicao   TipoRefeicao
+  quantidade     Int
+}
+
+enum TipoRefeicao {
+  CAFE_MANHA
+  ALMOCO
+  LANCHE
+  JANTAR
+  CEIA
+}
