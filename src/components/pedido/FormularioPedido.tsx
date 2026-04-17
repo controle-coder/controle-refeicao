@@ -4,13 +4,38 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TipoRefeicao } from '@/generated/prisma/enums'
 
-const TIPOS_REFEICAO: { valor: TipoRefeicao; label: string }[] = [
-  { valor: 'CAFE_MANHA', label: 'Café da Manhã' },
-  { valor: 'ALMOCO', label: 'Almoço' },
-  { valor: 'LANCHE', label: 'Lanche' },
-  { valor: 'JANTAR', label: 'Jantar' },
-  { valor: 'CEIA', label: 'Ceia' },
+const TIPOS_REFEICAO: { valor: TipoRefeicao; label: string; pedidoAte: number }[] = [
+  { valor: 'CAFE_MANHA', label: 'Café da Manhã', pedidoAte: 19 * 60 },
+  { valor: 'ALMOCO',     label: 'Almoço',        pedidoAte: 19 * 60 },
+  { valor: 'JANTAR',     label: 'Jantar',         pedidoAte: 14 * 60 },
 ]
+
+function minutosAgora() {
+  const d = new Date()
+  return d.getHours() * 60 + d.getMinutes()
+}
+
+function podeEditarTipos(tipos: string[]): boolean {
+  const min = minutosAgora()
+  if (tipos.includes('CAFE_MANHA')) return false
+  if (tipos.includes('ALMOCO') && min >= 8 * 60) return false
+  if (tipos.includes('JANTAR') && min >= 16 * 60) return false
+  return true
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  ABERTO: 'Aberto',
+  ENVIADO: 'Enviado',
+  CONFIRMADO: 'Confirmado',
+  CANCELADO: 'Cancelado',
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  ABERTO: 'bg-yellow-100 text-yellow-800',
+  ENVIADO: 'bg-blue-100 text-blue-800',
+  CONFIRMADO: 'bg-green-100 text-green-800',
+  CANCELADO: 'bg-red-100 text-red-800',
+}
 
 interface Restaurante { id: number; nome: string; telefone: string }
 interface Fazenda { id: number; nome: string }
@@ -19,6 +44,13 @@ interface Requisitante {
   id: number; nome: string
   fazendaId: number; fazenda: { nome: string }
   turmaId: number; turma: { nome: string }
+}
+interface PedidoResumo {
+  id: number
+  status: string
+  criadoEm: string
+  restaurante: { nome: string }
+  versoes: Array<{ itens: Array<{ quantidade: number; tipoRefeicao: string }> }>
 }
 
 interface Props {
@@ -34,6 +66,11 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
 
   // Etapa 1: quem está pedindo
   const [requisitanteId, setRequisitanteId] = useState<number>(0)
+
+  // Histórico
+  const [historicoAberto, setHistoricoAberto] = useState(false)
+  const [pedidosHistorico, setPedidosHistorico] = useState<PedidoResumo[]>([])
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false)
 
   // Etapa 2: restaurante
   const [restauranteId, setRestauranteId] = useState<number | null>(null)
@@ -53,13 +90,32 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
   const turmasFiltradas = fazendaId ? turmas.filter((t) => t.fazendaId === fazendaId) : turmas
   const totalRefeicoes = Object.values(quantidades).reduce((s, v) => s + v, 0)
 
-  function selecionarRequisitante(id: number) {
+  async function selecionarRequisitante(id: number) {
     setRequisitanteId(id)
     const r = requisitantes.find((r) => r.id === id)
     if (r) {
       setFazendaId(r.fazendaId)
       setTurmaId(r.turmaId)
     }
+    setCarregandoHistorico(true)
+    try {
+      const res = await fetch(`/api/pedidos?requisitanteId=${id}`)
+      const data = await res.json()
+      setPedidosHistorico(Array.isArray(data) ? data : [])
+    } catch {
+      setPedidosHistorico([])
+    } finally {
+      setCarregandoHistorico(false)
+      setHistoricoAberto(true)
+    }
+  }
+
+  function trocarRequisitante() {
+    setHistoricoAberto(false)
+    setRequisitanteId(0)
+    setFazendaId(0)
+    setTurmaId(0)
+    setPedidosHistorico([])
   }
 
   function handleQuantidade(tipo: string, valor: number) {
@@ -118,15 +174,15 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
 
       <div className="p-4">
 
-        {/* Etapa 1: Quem é você */}
-        {etapa === 1 && (
+        {/* Etapa 1: Quem é você — seleção de nome */}
+        {etapa === 1 && !historicoAberto && (
           <div className="space-y-3">
             <p className="text-sm text-gray-500">Selecione seu nome para continuar:</p>
             <div className="space-y-2">
               {requisitantes.map((r) => (
                 <button
                   key={r.id}
-                  onClick={() => { selecionarRequisitante(r.id); setEtapa(2) }}
+                  onClick={() => selecionarRequisitante(r.id)}
                   className="w-full text-left border rounded-xl p-4 hover:border-green-500 hover:bg-green-50 transition-colors"
                 >
                   <div className="font-semibold text-gray-800">{r.nome}</div>
@@ -139,6 +195,81 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
             {requisitantes.length === 0 && (
               <p className="text-center text-gray-400 py-8">Nenhum requisitante cadastrado</p>
             )}
+          </div>
+        )}
+
+        {/* Etapa 1: Histórico de pedidos */}
+        {etapa === 1 && historicoAberto && (
+          <div className="space-y-3">
+            {/* Cabeçalho com nome e botão trocar */}
+            <div className="flex items-center justify-between bg-green-50 rounded-lg px-4 py-3">
+              <div>
+                <p className="font-semibold text-gray-800">{requisitante?.nome}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {requisitante?.fazenda.nome} · {requisitante?.turma.nome}
+                </p>
+              </div>
+              <button
+                onClick={trocarRequisitante}
+                className="text-xs text-green-700 underline underline-offset-2"
+              >
+                Trocar
+              </button>
+            </div>
+
+            {/* Lista de pedidos */}
+            {carregandoHistorico ? (
+              <p className="text-sm text-gray-400 text-center py-6">Carregando...</p>
+            ) : pedidosHistorico.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">Meus Pedidos</p>
+                {pedidosHistorico.slice(0, 8).map((p) => {
+                  const totalItens = p.versoes[0]?.itens.reduce((s, i) => s + i.quantidade, 0) ?? 0
+                  const tipos = p.versoes[0]?.itens.map((i) => i.tipoRefeicao) ?? []
+                  const dentroDoprazo =
+                    p.status !== 'CANCELADO' && podeEditarTipos(tipos)
+                  return (
+                    <div key={p.id} className="border rounded-lg p-3">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-800 text-sm">Pedido #{p.id}</span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[p.status]}`}>
+                            {STATUS_LABELS[p.status]}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          {new Date(p.criadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {p.restaurante.nome} · {totalItens} refeição{totalItens !== 1 ? 'ões' : ''}
+                      </p>
+                      <div className="mt-2">
+                        <a
+                          href={`/pedidos/${p.id}`}
+                          className={`inline-block text-xs px-3 py-1 rounded border transition-colors ${
+                            dentroDoprazo
+                              ? 'border-green-500 text-green-700 hover:bg-green-50'
+                              : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                          }`}
+                        >
+                          {dentroDoprazo ? 'Ver / Editar' : 'Ver'}
+                        </a>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400 text-center py-6">Nenhum pedido encontrado</p>
+            )}
+
+            <button
+              onClick={() => { setHistoricoAberto(false); setEtapa(2) }}
+              className="w-full bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 font-semibold text-sm"
+            >
+              + Novo Pedido
+            </button>
           </div>
         )}
 
@@ -159,7 +290,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
             {restaurantes.length === 0 && (
               <p className="text-center text-gray-400 py-8">Nenhum restaurante cadastrado</p>
             )}
-            <button onClick={() => setEtapa(1)} className="w-full border text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
+            <button onClick={() => { setEtapa(1); setHistoricoAberto(true) }} className="w-full border text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
               ← Voltar
             </button>
           </div>

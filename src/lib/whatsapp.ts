@@ -3,9 +3,7 @@ import { TipoRefeicao } from '@/generated/prisma/enums'
 const LABELS_TIPO: Record<TipoRefeicao, string> = {
   CAFE_MANHA: 'Café da Manhã',
   ALMOCO: 'Almoço',
-  LANCHE: 'Lanche',
   JANTAR: 'Jantar',
-  CEIA: 'Ceia',
 }
 
 export interface ItemMensagem {

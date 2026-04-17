@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -89,6 +90,15 @@ export default function LoginPage() {
             {carregando ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+
+        <div className="mt-6 pt-5 border-t border-gray-100 text-center">
+          <Link
+            href="/pedidos"
+            className="inline-block w-full border border-green-600 text-green-700 hover:bg-green-50 font-medium py-2.5 rounded-lg transition-colors text-sm"
+          >
+            🛒 Ir para Tela de Pedidos
+          </Link>
+        </div>
       </div>
     </div>
   )

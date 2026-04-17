@@ -24,8 +24,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <span className="font-bold text-lg">🍽️ Admin</span>
         <div className="flex items-center gap-3 text-sm">
           <span className="text-gray-400">{session.nome}</span>
-          <Link href="/pedidos" className="text-gray-400 hover:text-white text-xs">
-            Pedidos
+          <Link href="/pedidos" className="bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors">
+            🛒 Tela de Pedidos
           </Link>
           <LogoutButton />
         </div>
@@ -42,6 +42,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 {item.label}
               </Link>
             ))}
+            <div className="pt-2 mt-2 border-t border-gray-700">
+              <Link
+                href="/pedidos"
+                className="block px-3 py-2 rounded bg-green-700 hover:bg-green-600 text-white font-medium transition-colors"
+              >
+                🛒 Tela de Pedidos
+              </Link>
+            </div>
           </div>
         </nav>
         <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>

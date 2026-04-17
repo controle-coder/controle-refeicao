@@ -8,17 +8,13 @@ import { gerarMensagemPedido, gerarLinkWhatsApp } from '@/lib/whatsapp'
 const TIPOS_REFEICAO: { valor: TipoRefeicao; label: string }[] = [
   { valor: 'CAFE_MANHA', label: 'Café da Manhã' },
   { valor: 'ALMOCO', label: 'Almoço' },
-  { valor: 'LANCHE', label: 'Lanche' },
   { valor: 'JANTAR', label: 'Jantar' },
-  { valor: 'CEIA', label: 'Ceia' },
 ]
 
 const TIPO_LABELS: Record<TipoRefeicao, string> = {
   CAFE_MANHA: 'Café da Manhã',
   ALMOCO: 'Almoço',
-  LANCHE: 'Lanche',
   JANTAR: 'Jantar',
-  CEIA: 'Ceia',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -77,10 +73,18 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
   const [carregando, setCarregando] = useState(false)
 
   const versaoAtual = pedido.versoes.find((v) => v.numero === pedido.versaoAtual)
-  const podeCancelar =
-    pedido.status !== 'CANCELADO' &&
-    (sessaoRole === 'ADMIN' || pedido.requisitante.nome !== undefined)
 
+  function podeEditarAgora(): boolean {
+    if (pedido.status === 'CANCELADO') return false
+    const tipos = versaoAtual?.itens.map((i) => i.tipoRefeicao) ?? []
+    const min = new Date().getHours() * 60 + new Date().getMinutes()
+    if (tipos.includes('CAFE_MANHA')) return false
+    if (tipos.includes('ALMOCO') && min >= 8 * 60) return false
+    if (tipos.includes('JANTAR') && min >= 16 * 60) return false
+    return true
+  }
+
+  const dentroDosPrazo = podeEditarAgora()
   function iniciarEdicao() {
     if (!versaoAtual) return
     const qtds: Record<string, number> = {}
@@ -216,12 +220,22 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
                   </svg>
                   Enviar para Restaurante
                 </button>
-                <button
-                  onClick={iniciarEdicao}
-                  className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 text-sm"
-                >
-                  Editar / Nova Versão
-                </button>
+                {dentroDosPrazo ? (
+                  <button
+                    onClick={iniciarEdicao}
+                    className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 text-sm"
+                  >
+                    Editar / Nova Versão
+                  </button>
+                ) : (
+                  <p className="text-xs text-gray-400 text-center py-1">
+                    {versaoAtual?.itens.some((i) => i.tipoRefeicao === 'CAFE_MANHA')
+                      ? 'Pedido de Café da Manhã não permite edição'
+                      : versaoAtual?.itens.some((i) => i.tipoRefeicao === 'ALMOCO')
+                      ? 'Prazo de edição do Almoço encerrado às 8:00'
+                      : 'Prazo de edição do Jantar encerrado às 16:00'}
+                  </p>
+                )}
                 {(sessaoRole === 'ADMIN') && (
                   <button
                     onClick={cancelarPedido}

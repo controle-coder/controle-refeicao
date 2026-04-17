@@ -120,7 +120,5 @@ model ItemRefeicao {
 enum TipoRefeicao {
   CAFE_MANHA
   ALMOCO
-  LANCHE
   JANTAR
-  CEIA
 }

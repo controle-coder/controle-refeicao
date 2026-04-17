@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { TipoRefeicao } from '@/generated/prisma/enums'
 
 const itemSchema = z.object({
-  tipoRefeicao: z.nativeEnum(TipoRefeicao),
+  tipoRefeicao: z.enum(Object.values(TipoRefeicao) as [TipoRefeicao, ...TipoRefeicao[]]),
   quantidade: z.number().int().min(0),
 })
 
@@ -21,8 +21,23 @@ export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos
     const body = await request.json()
     const data = schema.parse(body)
 
-    const pedido = await prisma.pedido.findUnique({ where: { id: Number(id) } })
+    const pedido = await prisma.pedido.findUnique({
+      where: { id: Number(id) },
+      include: { versoes: { orderBy: { numero: 'desc' }, take: 1, include: { itens: true } } },
+    })
     if (!pedido) return Response.json({ error: 'Não encontrado' }, { status: 404 })
+
+    const tipos = pedido.versoes[0]?.itens.map((i) => i.tipoRefeicao) ?? []
+    const min = new Date().getHours() * 60 + new Date().getMinutes()
+    if (tipos.includes('CAFE_MANHA')) {
+      return Response.json({ error: 'Pedido de Café da Manhã não permite edição' }, { status: 400 })
+    }
+    if (tipos.includes('ALMOCO') && min >= 8 * 60) {
+      return Response.json({ error: 'Prazo de edição do Almoço encerrado às 8:00' }, { status: 400 })
+    }
+    if (tipos.includes('JANTAR') && min >= 16 * 60) {
+      return Response.json({ error: 'Prazo de edição do Jantar encerrado às 16:00' }, { status: 400 })
+    }
 
     await criarNovaVersao({
       pedidoId: Number(id),
