@@ -10,4 +10,4 @@ RUN DATABASE_URL="file:/tmp/build.db" npm run build
 RUN mkdir -p /app/data
 
 EXPOSE 3000
-CMD ["sh", "start.sh"]
+CMD ["sh", "/app/start.sh"]
