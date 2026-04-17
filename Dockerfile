@@ -10,4 +10,4 @@ RUN DATABASE_URL="file:/tmp/build.db" npm run build
 RUN mkdir -p /app/data
 
 EXPOSE 3000
-CMD npx prisma migrate deploy && npm start -- -p $PORT
+CMD ["sh", "start.sh"]
