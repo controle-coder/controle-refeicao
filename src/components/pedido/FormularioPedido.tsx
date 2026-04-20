@@ -15,6 +15,16 @@ function minutosAgora() {
   return d.getHours() * 60 + d.getMinutes()
 }
 
+// Retorna data local em formato YYYY-MM-DD, offset em dias (0 = hoje, 1 = amanhã)
+function localDateStr(offsetDias = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDias)
+  const ano = d.getFullYear()
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}
+
 function podeEditarPedido(dataRefeicao: string, tipos: string[], status: string): boolean {
   if (status === 'CANCELADO') return false
 
@@ -104,11 +114,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
   // Etapa 4: refeições
   const [quantidades, setQuantidades] = useState<Record<string, number>>({})
   const [observacao, setObservacao] = useState('')
-  const [dataRefeicao, setDataRefeicao] = useState(() => {
-    const d = new Date()
-    d.setDate(d.getDate() + 1)
-    return d.toISOString().split('T')[0]
-  })
+  const [dataRefeicao, setDataRefeicao] = useState(() => localDateStr(1))
 
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
@@ -124,8 +130,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
         setPedidosHistorico([])
         setQuantidades({})
         setObservacao('')
-        const d = new Date(); d.setDate(d.getDate() + 1)
-        setDataRefeicao(d.toISOString().split('T')[0])
+        setDataRefeicao(localDateStr(1))
       }
     }
     window.addEventListener('pageshow', handlePageShow)
@@ -461,7 +466,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                 type="date"
                 value={dataRefeicao}
                 onChange={(e) => setDataRefeicao(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
+                min={localDateStr(0)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               />
               <p className="text-xs text-gray-400">Padrão: próximo dia. Altere se necessário.</p>
