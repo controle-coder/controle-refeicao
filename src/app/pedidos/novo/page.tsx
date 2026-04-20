@@ -24,10 +24,15 @@ export default async function NovoPedidoPage() {
     }),
   ])
 
+  // Key única por render: força React a remontar o formulário a cada
+  // navegação para esta página, descartando estado anterior do cache de rota.
+  const pageKey = Date.now()
+
   return (
     <div className="space-y-4 mt-2">
       <h1 className="text-xl font-bold text-gray-800">Novo Pedido</h1>
       <FormularioPedido
+        key={pageKey}
         restaurantes={restaurantes}
         fazendas={fazendas}
         turmas={turmas as any}
