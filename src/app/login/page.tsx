@@ -27,9 +27,11 @@ export default function LoginPage() {
         return
       }
       if (data.role === 'ADMIN') {
-        router.push('/admin')
+        window.location.href = '/admin'
+      } else if (data.role === 'RESTAURANTE') {
+        window.location.href = '/restaurante'
       } else {
-        router.push('/pedidos')
+        window.location.href = '/pedidos'
       }
     } catch {
       setErro('Erro de conexão')

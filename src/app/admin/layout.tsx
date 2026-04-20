@@ -10,6 +10,7 @@ const navItems = [
   { href: '/admin/turmas', label: '👥 Turmas' },
   { href: '/admin/contratos', label: '📄 Contratos' },
   { href: '/admin/requisitantes', label: '👤 Requisitantes' },
+  { href: '/admin/usuarios-restaurante', label: '🍽️ Usuários Restaurante' },
   { href: '/admin/pedidos', label: '📋 Pedidos' },
   { href: '/admin/relatorios', label: '📈 Relatórios' },
 ]

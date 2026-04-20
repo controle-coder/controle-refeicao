@@ -4,9 +4,10 @@ import { cookies } from 'next/headers'
 export interface SessionData {
   id: number
   nome: string
-  role: 'ADMIN' | 'REQUISITANTE'
+  role: 'ADMIN' | 'REQUISITANTE' | 'RESTAURANTE'
   fazendaId: number | null
   turmaId: number | null
+  restauranteId: number | null
 }
 
 const sessionOptions = {

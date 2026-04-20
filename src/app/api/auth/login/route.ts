@@ -32,9 +32,10 @@ export async function POST(request: NextRequest) {
     const session = await getSession()
     session.id = requisitante.id
     session.nome = requisitante.nome
-    session.role = requisitante.role as 'ADMIN' | 'REQUISITANTE'
+    session.role = requisitante.role as 'ADMIN' | 'REQUISITANTE' | 'RESTAURANTE'
     session.fazendaId = requisitante.fazendaId
     session.turmaId = requisitante.turmaId
+    session.restauranteId = requisitante.restauranteId ?? null
     await session.save()
 
     return Response.json({
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
       role: requisitante.role,
       fazendaId: requisitante.fazendaId,
       turmaId: requisitante.turmaId,
+      restauranteId: requisitante.restauranteId ?? null,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -15,7 +15,7 @@ const sessionOptions = {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Tudo em /pedidos e APIs de pedidos são públicos — sem autenticação
+  // Rotas públicas ou com autenticação própria
   if (
     pathname.startsWith('/pedidos') ||
     pathname.startsWith('/api/pedidos') ||
@@ -29,10 +29,18 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Admin exige sessão com role ADMIN
   const response = NextResponse.next()
   const session = await getIronSession<SessionData>(request, response, sessionOptions)
 
+  // Área do restaurante: role RESTAURANTE
+  if (pathname.startsWith('/restaurante') || pathname.startsWith('/api/restaurante')) {
+    if (!session.id || session.role !== 'RESTAURANTE') {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    return response
+  }
+
+  // Admin: role ADMIN
   if (!session.id || session.role !== 'ADMIN') {
     return NextResponse.redirect(new URL('/login', request.url))
   }
