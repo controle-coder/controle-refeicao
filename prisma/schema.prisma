@@ -102,6 +102,7 @@ model Pedido {
   criadoEm       DateTime @default(now())
   atualizadoEm   DateTime @updatedAt
 
+  dataRefeicao       DateTime @default(now())
   canceladoPorId     Int?
   canceladoPor       Requisitante? @relation("PedidoCancelador", fields: [canceladoPorId], references: [id])
   motivoCancelamento String?

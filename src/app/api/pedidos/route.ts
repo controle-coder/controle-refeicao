@@ -14,6 +14,7 @@ const schema = z.object({
   restauranteId: z.number().int().positive(),
   fazendaId: z.number().int().positive(),
   turmaId: z.number().int().positive(),
+  dataRefeicao: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida'),
   itens: z.array(itemSchema).min(1),
   observacao: z.string().optional(),
 })
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
       fazendaId: data.fazendaId,
       turmaId: data.turmaId,
       requisitanteId: data.requisitanteId,
+      dataRefeicao: new Date(data.dataRefeicao + 'T12:00:00.000Z'),
       itens: data.itens,
       observacao: data.observacao,
     })

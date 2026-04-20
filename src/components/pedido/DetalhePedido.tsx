@@ -51,6 +51,7 @@ interface Pedido {
   status: string
   versaoAtual: number
   criadoEm: Date | string
+  dataRefeicao: Date | string
   restaurante: { id: number; nome: string; telefone: string }
   fazenda: { nome: string }
   turma: { nome: string }
@@ -144,7 +145,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
     if (!versaoAtual) return
     const mensagem = gerarMensagemPedido({
       versao: pedido.versaoAtual,
-      data: new Date(pedido.criadoEm),
+      data: new Date(pedido.dataRefeicao),
       fazenda: pedido.fazenda.nome,
       turma: pedido.turma.nome,
       requisitante: pedido.requisitante.nome,
@@ -178,6 +179,10 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
         </div>
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+          <div className="text-gray-500">Data das refeições</div>
+          <div className="font-medium text-gray-800">
+            {new Date(pedido.dataRefeicao).toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </div>
           <div className="text-gray-500">Restaurante</div>
           <div className="font-medium text-gray-800">{pedido.restaurante.nome}</div>
           <div className="text-gray-500">Fazenda</div>

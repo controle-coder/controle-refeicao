@@ -11,6 +11,7 @@ export interface CriarPedidoInput {
   fazendaId: number
   turmaId: number
   requisitanteId: number
+  dataRefeicao: Date
   itens: ItemInput[]
   observacao?: string
 }
@@ -30,6 +31,7 @@ export async function criarPedido(input: CriarPedidoInput) {
         fazendaId: input.fazendaId,
         turmaId: input.turmaId,
         requisitanteId: input.requisitanteId,
+        dataRefeicao: input.dataRefeicao,
         versaoAtual: 1,
         status: Status.ABERTO,
       },

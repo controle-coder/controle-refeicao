@@ -94,6 +94,11 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
   // Etapa 4: refeições
   const [quantidades, setQuantidades] = useState<Record<string, number>>({})
   const [observacao, setObservacao] = useState('')
+  const [dataRefeicao, setDataRefeicao] = useState(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    return d.toISOString().split('T')[0]
+  })
 
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
@@ -109,6 +114,8 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
         setPedidosHistorico([])
         setQuantidades({})
         setObservacao('')
+        const d = new Date(); d.setDate(d.getDate() + 1)
+        setDataRefeicao(d.toISOString().split('T')[0])
       }
     }
     window.addEventListener('pageshow', handlePageShow)
@@ -184,6 +191,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
           restauranteId,
           fazendaId,
           turmaId,
+          dataRefeicao,
           itens,
           observacao: observacao || undefined,
         }),
@@ -246,7 +254,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
         {/* Etapa 1: Histórico de pedidos */}
         {etapa === 1 && historicoAberto && (
           <div className="space-y-3">
-            {/* Cabeçalho com nome e botão trocar */}
+            {/* Cabeçalho com nome, botão trocar e novo pedido */}
             <div className="flex items-center justify-between bg-green-50 rounded-lg px-4 py-3">
               <div>
                 <p className="font-semibold text-gray-800">{requisitante?.nome}</p>
@@ -254,12 +262,20 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                   {requisitante?.fazenda.nome} · {requisitante?.turma.nome}
                 </p>
               </div>
-              <button
-                onClick={trocarRequisitante}
-                className="text-xs text-green-700 underline underline-offset-2"
-              >
-                Trocar
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={trocarRequisitante}
+                  className="text-xs text-green-700 underline underline-offset-2"
+                >
+                  Trocar
+                </button>
+                <button
+                  onClick={() => { setHistoricoAberto(false); setEtapa(2) }}
+                  className="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700 font-semibold whitespace-nowrap"
+                >
+                  + Novo Pedido
+                </button>
+              </div>
             </div>
 
             {/* Lista de pedidos */}
@@ -328,12 +344,6 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
               <p className="text-sm text-gray-400 text-center py-6">Nenhum pedido encontrado</p>
             )}
 
-            <button
-              onClick={() => { setHistoricoAberto(false); setEtapa(2) }}
-              className="w-full bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 font-semibold text-sm"
-            >
-              + Novo Pedido
-            </button>
           </div>
         )}
 
@@ -433,6 +443,20 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                 </div>
               </div>
             ))}
+
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Data das refeições
+              </label>
+              <input
+                type="date"
+                value={dataRefeicao}
+                onChange={(e) => setDataRefeicao(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <p className="text-xs text-gray-400">Padrão: próximo dia. Altere se necessário.</p>
+            </div>
 
             <textarea
               value={observacao}
