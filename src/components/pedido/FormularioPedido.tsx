@@ -113,7 +113,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
 
   // Etapa 4: refeições
   const [quantidades, setQuantidades] = useState<Record<string, number>>({})
-  const [observacao, setObservacao] = useState('')
+  const [observacoes, setObservacoes] = useState<Record<string, string>>({})
   const [dataRefeicao, setDataRefeicao] = useState(() => localDateStr(1))
 
   const [erro, setErro] = useState('')
@@ -129,7 +129,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
         setTurmaId(0)
         setPedidosHistorico([])
         setQuantidades({})
-        setObservacao('')
+        setObservacoes({})
         setDataRefeicao(localDateStr(1))
       }
     }
@@ -197,6 +197,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
       const itens = TIPOS_REFEICAO.filter((t) => (quantidades[t.valor] ?? 0) > 0).map((t) => ({
         tipoRefeicao: t.valor,
         quantidade: quantidades[t.valor],
+        observacao: observacoes[t.valor]?.trim() || undefined,
       }))
       const res = await fetch('/api/pedidos', {
         method: 'POST',
@@ -208,7 +209,6 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
           turmaId,
           dataRefeicao,
           itens,
-          observacao: observacao || undefined,
         }),
       })
       const data = await res.json()
@@ -436,25 +436,34 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
           <div className="space-y-4">
             <p className="text-sm text-gray-500">Informe as quantidades:</p>
             {TIPOS_REFEICAO.map((tipo) => (
-              <div key={tipo.valor} className="flex items-center justify-between py-2 border-b last:border-0">
-                <span className="text-gray-700 font-medium">{tipo.label}</span>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => handleQuantidade(tipo.valor, (quantidades[tipo.valor] ?? 0) - 1)}
-                    className="w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 font-bold text-lg leading-none"
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center font-bold text-gray-800 text-lg">
-                    {quantidades[tipo.valor] ?? 0}
-                  </span>
-                  <button
-                    onClick={() => handleQuantidade(tipo.valor, (quantidades[tipo.valor] ?? 0) + 1)}
-                    className="w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 font-bold text-lg leading-none"
-                  >
-                    +
-                  </button>
+              <div key={tipo.valor} className="py-2 border-b last:border-0 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 font-medium">{tipo.label}</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleQuantidade(tipo.valor, (quantidades[tipo.valor] ?? 0) - 1)}
+                      className="w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 font-bold text-lg leading-none"
+                    >
+                      −
+                    </button>
+                    <span className="w-8 text-center font-bold text-gray-800 text-lg">
+                      {quantidades[tipo.valor] ?? 0}
+                    </span>
+                    <button
+                      onClick={() => handleQuantidade(tipo.valor, (quantidades[tipo.valor] ?? 0) + 1)}
+                      className="w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 font-bold text-lg leading-none"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
+                <input
+                  type="text"
+                  value={observacoes[tipo.valor] ?? ''}
+                  onChange={(e) => setObservacoes((p) => ({ ...p, [tipo.valor]: e.target.value }))}
+                  placeholder={`Obs. ${tipo.label} (opcional)`}
+                  className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-600 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-green-400"
+                />
               </div>
             ))}
 
@@ -471,14 +480,6 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
               />
               <p className="text-xs text-gray-400">Padrão: próximo dia. Altere se necessário.</p>
             </div>
-
-            <textarea
-              value={observacao}
-              onChange={(e) => setObservacao(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              rows={2}
-              placeholder="Observação (opcional)"
-            />
 
             {totalRefeicoes > 0 && (
               <div className="bg-green-50 rounded-lg p-3 text-sm text-green-800 font-medium">

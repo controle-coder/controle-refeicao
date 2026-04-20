@@ -35,6 +35,7 @@ interface Item {
   id: number
   tipoRefeicao: TipoRefeicao
   quantidade: number
+  observacao?: string | null
 }
 
 interface VersaoPedido {
@@ -69,7 +70,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
   const router = useRouter()
   const [editando, setEditando] = useState(false)
   const [quantidades, setQuantidades] = useState<Record<string, number>>({})
-  const [observacao, setObservacao] = useState('')
+  const [observacoes, setObservacoes] = useState<Record<string, string>>({})
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [modalGrupo, setModalGrupo] = useState<{ mensagem: string; link: string } | null>(null)
@@ -99,11 +100,13 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
   function iniciarEdicao() {
     if (!versaoAtual) return
     const qtds: Record<string, number> = {}
+    const obs: Record<string, string> = {}
     versaoAtual.itens.forEach((i) => {
       qtds[i.tipoRefeicao] = i.quantidade
+      obs[i.tipoRefeicao] = i.observacao ?? ''
     })
     setQuantidades(qtds)
-    setObservacao(versaoAtual.observacao ?? '')
+    setObservacoes(obs)
     setEditando(true)
   }
 
@@ -121,11 +124,12 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
       const itens = TIPOS_REFEICAO.map((t) => ({
         tipoRefeicao: t.valor,
         quantidade: quantidades[t.valor] ?? 0,
+        observacao: observacoes[t.valor]?.trim() || undefined,
       }))
       const res = await fetch(`/api/pedidos/${pedido.id}/versao`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuarioId: sessaoId, itens, observacao: observacao || undefined }),
+        body: JSON.stringify({ usuarioId: sessaoId, itens }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -166,7 +170,6 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
       turma: pedido.turma.nome,
       requisitante: pedido.requisitante.nome,
       itens: versaoAtual.itens,
-      observacao: versaoAtual.observacao,
     })
 
     if (pedido.restaurante.linkGrupoWhatsApp) {
@@ -225,19 +228,19 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
               <p className="text-sm font-medium text-gray-700 mb-2">Refeições (V{versaoAtual.numero})</p>
               <div className="space-y-1">
                 {versaoAtual.itens.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span className="text-gray-600">{TIPO_LABELS[item.tipoRefeicao]}</span>
-                    <span className="font-medium text-gray-800">
-                      {item.quantidade} refeição{item.quantidade !== 1 ? 'ões' : ''}
-                    </span>
+                  <div key={item.id} className="text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">{TIPO_LABELS[item.tipoRefeicao]}</span>
+                      <span className="font-medium text-gray-800">
+                        {item.quantidade} refeição{item.quantidade !== 1 ? 'ões' : ''}
+                      </span>
+                    </div>
+                    {item.observacao && (
+                      <p className="text-xs text-gray-400 italic ml-1">↳ {item.observacao}</p>
+                    )}
                   </div>
                 ))}
               </div>
-              {versaoAtual.observacao && (
-                <p className="text-sm text-gray-500 mt-2 italic">
-                  Obs: {versaoAtual.observacao}
-                </p>
-              )}
             </div>
 
             {pedido.status !== 'CANCELADO' && (
@@ -284,38 +287,40 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
           <div className="border-t pt-3 space-y-4">
             <p className="text-sm font-medium text-gray-700">Nova Versão (V{pedido.versaoAtual + 1})</p>
             {TIPOS_REFEICAO.map((tipo) => (
-              <div key={tipo.valor} className="flex items-center justify-between py-1 border-b last:border-0">
-                <span className="text-gray-700 text-sm">{tipo.label}</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() =>
-                      setQuantidades((p) => ({ ...p, [tipo.valor]: Math.max(0, (p[tipo.valor] ?? 0) - 1) }))
-                    }
-                    className="w-7 h-7 rounded-full border text-gray-600 hover:bg-gray-100 font-bold text-sm"
-                  >
-                    −
-                  </button>
-                  <span className="w-6 text-center font-semibold text-sm">
-                    {quantidades[tipo.valor] ?? 0}
-                  </span>
-                  <button
-                    onClick={() =>
-                      setQuantidades((p) => ({ ...p, [tipo.valor]: (p[tipo.valor] ?? 0) + 1 }))
-                    }
-                    className="w-7 h-7 rounded-full border text-gray-600 hover:bg-gray-100 font-bold text-sm"
-                  >
-                    +
-                  </button>
+              <div key={tipo.valor} className="py-2 border-b last:border-0 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 text-sm font-medium">{tipo.label}</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        setQuantidades((p) => ({ ...p, [tipo.valor]: Math.max(0, (p[tipo.valor] ?? 0) - 1) }))
+                      }
+                      className="w-7 h-7 rounded-full border text-gray-600 hover:bg-gray-100 font-bold text-sm"
+                    >
+                      −
+                    </button>
+                    <span className="w-6 text-center font-semibold text-sm">
+                      {quantidades[tipo.valor] ?? 0}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setQuantidades((p) => ({ ...p, [tipo.valor]: (p[tipo.valor] ?? 0) + 1 }))
+                      }
+                      className="w-7 h-7 rounded-full border text-gray-600 hover:bg-gray-100 font-bold text-sm"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
+                <input
+                  type="text"
+                  value={observacoes[tipo.valor] ?? ''}
+                  onChange={(e) => setObservacoes((p) => ({ ...p, [tipo.valor]: e.target.value }))}
+                  placeholder={`Obs. ${tipo.label} (opcional)`}
+                  className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-600 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-green-400"
+                />
               </div>
             ))}
-            <textarea
-              value={observacao}
-              onChange={(e) => setObservacao(e.target.value)}
-              placeholder="Observação (opcional)"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              rows={2}
-            />
             {erro && <p className="text-red-600 text-sm">{erro}</p>}
             <div className="flex gap-2">
               <button
@@ -400,17 +405,19 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
                   {new Date(versao.criadoEm).toLocaleString('pt-BR')} · {versao.criadoPor.nome}
                 </div>
               </div>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {versao.itens.map((item) => (
-                  <div key={item.id} className="flex justify-between text-gray-600">
-                    <span>{TIPO_LABELS[item.tipoRefeicao]}</span>
-                    <span>{item.quantidade}</span>
+                  <div key={item.id}>
+                    <div className="flex justify-between text-gray-600 text-xs">
+                      <span>{TIPO_LABELS[item.tipoRefeicao]}</span>
+                      <span>{item.quantidade}</span>
+                    </div>
+                    {item.observacao && (
+                      <p className="text-gray-400 italic text-xs ml-1">↳ {item.observacao}</p>
+                    )}
                   </div>
                 ))}
               </div>
-              {versao.observacao && (
-                <p className="text-gray-500 italic mt-1 text-xs">Obs: {versao.observacao}</p>
-              )}
             </div>
           ))}
         </div>

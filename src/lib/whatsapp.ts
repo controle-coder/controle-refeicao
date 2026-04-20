@@ -9,6 +9,7 @@ const LABELS_TIPO: Record<TipoRefeicao, string> = {
 export interface ItemMensagem {
   tipoRefeicao: TipoRefeicao
   quantidade: number
+  observacao?: string | null
 }
 
 export interface DadosMensagem {
@@ -30,10 +31,11 @@ export function gerarMensagemPedido(dados: DadosMensagem): string {
 
   const itensLinhas = dados.itens
     .filter((i) => i.quantidade > 0)
-    .map(
-      (i) =>
-        `• ${LABELS_TIPO[i.tipoRefeicao]}: ${i.quantidade} refeição${i.quantidade !== 1 ? 'ões' : ''}`
-    )
+    .map((i) => {
+      let linha = `• ${LABELS_TIPO[i.tipoRefeicao]}: ${i.quantidade} refeição${i.quantidade !== 1 ? 'ões' : ''}`
+      if (i.observacao) linha += ` _(${i.observacao})_`
+      return linha
+    })
     .join('\n')
 
   let mensagem = `*PEDIDO DE REFEIÇÃO - V${dados.versao}*\n`

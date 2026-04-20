@@ -4,6 +4,7 @@ import { TipoRefeicao, Status } from '@/generated/prisma/enums'
 export interface ItemInput {
   tipoRefeicao: TipoRefeicao
   quantidade: number
+  observacao?: string
 }
 
 export interface CriarPedidoInput {
@@ -49,6 +50,7 @@ export async function criarPedido(input: CriarPedidoInput) {
             .map((i) => ({
               tipoRefeicao: i.tipoRefeicao,
               quantidade: i.quantidade,
+              observacao: i.observacao || null,
             })),
         },
       },
@@ -87,7 +89,7 @@ export async function criarNovaVersao(input: CriarNovaVersaoInput) {
       ...input.itens.filter((i) => i.quantidade > 0),
       ...itensAnteriores
         .filter((i) => !tiposNoInput.has(i.tipoRefeicao) && i.quantidade > 0)
-        .map((i) => ({ tipoRefeicao: i.tipoRefeicao, quantidade: i.quantidade })),
+        .map((i) => ({ tipoRefeicao: i.tipoRefeicao, quantidade: i.quantidade, observacao: i.observacao ?? undefined })),
     ]
 
     if (itensMesclados.length === 0) {
@@ -106,6 +108,7 @@ export async function criarNovaVersao(input: CriarNovaVersaoInput) {
           create: itensMesclados.map((i) => ({
             tipoRefeicao: i.tipoRefeicao,
             quantidade: i.quantidade,
+            observacao: i.observacao || null,
           })),
         },
       },

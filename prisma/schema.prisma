@@ -141,6 +141,7 @@ model ItemRefeicao {
   versaoPedido   VersaoPedido @relation(fields: [versaoPedidoId], references: [id])
   tipoRefeicao   TipoRefeicao
   quantidade     Int
+  observacao     String?
 }
 
 enum TipoRefeicao {

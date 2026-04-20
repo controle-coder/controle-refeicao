@@ -7,6 +7,7 @@ import { TipoRefeicao } from '@/generated/prisma/enums'
 const itemSchema = z.object({
   tipoRefeicao: z.enum(Object.values(TipoRefeicao) as [TipoRefeicao, ...TipoRefeicao[]]),
   quantidade: z.number().int().min(0),
+  observacao: z.string().optional(),
 })
 
 const schema = z.object({
