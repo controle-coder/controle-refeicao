@@ -7,6 +7,7 @@ interface Restaurante {
   id: number
   nome: string
   telefone: string
+  linkGrupoWhatsApp: string | null
   ativo: boolean
 }
 
@@ -15,20 +16,20 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
   const [items, setItems] = useState(initial)
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<Restaurante | null>(null)
-  const [form, setForm] = useState({ nome: '', telefone: '' })
+  const [form, setForm] = useState({ nome: '', telefone: '', linkGrupoWhatsApp: '' })
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
 
   function abrirNovo() {
     setEditando(null)
-    setForm({ nome: '', telefone: '' })
+    setForm({ nome: '', telefone: '', linkGrupoWhatsApp: '' })
     setErro('')
     setModalAberto(true)
   }
 
   function abrirEditar(item: Restaurante) {
     setEditando(item)
-    setForm({ nome: item.nome, telefone: item.telefone })
+    setForm({ nome: item.nome, telefone: item.telefone, linkGrupoWhatsApp: item.linkGrupoWhatsApp ?? '' })
     setErro('')
     setModalAberto(true)
   }
@@ -36,7 +37,7 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
   async function salvar() {
     setErro('')
     if (!form.nome.trim() || !form.telefone.trim()) {
-      setErro('Preencha todos os campos')
+      setErro('Preencha Nome e Telefone')
       return
     }
     setCarregando(true)
@@ -46,7 +47,11 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          nome: form.nome,
+          telefone: form.telefone,
+          linkGrupoWhatsApp: form.linkGrupoWhatsApp.trim() || null,
+        }),
       })
       if (!res.ok) {
         const d = await res.json()
@@ -94,6 +99,7 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
             <tr>
               <th className="px-4 py-3 text-left">Nome</th>
               <th className="px-4 py-3 text-left">Telefone</th>
+              <th className="px-4 py-3 text-left">Grupo WhatsApp</th>
               <th className="px-4 py-3 text-center">Status</th>
               <th className="px-4 py-3 text-right">Ações</th>
             </tr>
@@ -103,6 +109,20 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
               <tr key={item.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-800">{item.nome}</td>
                 <td className="px-4 py-3 text-gray-500">{item.telefone}</td>
+                <td className="px-4 py-3 text-gray-500">
+                  {item.linkGrupoWhatsApp ? (
+                    <a
+                      href={item.linkGrupoWhatsApp}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-600 hover:underline text-xs"
+                    >
+                      Ver grupo
+                    </a>
+                  ) : (
+                    <span className="text-gray-300 text-xs">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-center">
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -163,6 +183,21 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Link do Grupo WhatsApp <span className="text-gray-400 text-xs">(opcional)</span>
+              </label>
+              <input
+                type="url"
+                placeholder="https://chat.whatsapp.com/XXXXXX"
+                value={form.linkGrupoWhatsApp}
+                onChange={(e) => setForm((p) => ({ ...p, linkGrupoWhatsApp: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Se preenchido, o botão WhatsApp copiará a mensagem e abrirá o grupo automaticamente.
+              </p>
             </div>
             {erro && <p className="text-red-600 text-sm">{erro}</p>}
             <div className="flex gap-2">

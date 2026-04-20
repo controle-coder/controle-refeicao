@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TipoRefeicao } from '@/generated/prisma/enums'
-import { gerarMensagemPedido, gerarLinkWhatsApp } from '@/lib/whatsapp'
+import { gerarMensagemPedido, gerarLinkWhatsApp, enviarParaGrupo } from '@/lib/whatsapp'
 
 const TIPOS_REFEICAO: { valor: TipoRefeicao; label: string }[] = [
   { valor: 'CAFE_MANHA', label: 'Café da Manhã' },
@@ -52,7 +52,7 @@ interface Pedido {
   versaoAtual: number
   criadoEm: Date | string
   dataRefeicao: Date | string
-  restaurante: { id: number; nome: string; telefone: string }
+  restaurante: { id: number; nome: string; telefone: string; linkGrupoWhatsApp?: string | null }
   fazenda: { nome: string }
   turma: { nome: string }
   requisitante: { nome: string }
@@ -160,8 +160,17 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
       itens: versaoAtual.itens,
       observacao: versaoAtual.observacao,
     })
-    const link = gerarLinkWhatsApp(pedido.restaurante.telefone, mensagem)
-    window.open(link, '_blank')
+
+    if (pedido.restaurante.linkGrupoWhatsApp) {
+      const copiou = await enviarParaGrupo(pedido.restaurante.linkGrupoWhatsApp, mensagem)
+      if (copiou) {
+        alert('Mensagem copiada! Cole no grupo do WhatsApp.')
+      }
+    } else {
+      const link = gerarLinkWhatsApp(pedido.restaurante.telefone, mensagem)
+      window.open(link, '_blank')
+    }
+
     await fetch(`/api/pedidos/${pedido.id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -173,7 +182,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-700 text-sm">
+        <button onClick={() => { window.location.href = '/pedidos/novo' }} className="text-gray-500 hover:text-gray-700 text-sm">
           ← Voltar
         </button>
       </div>

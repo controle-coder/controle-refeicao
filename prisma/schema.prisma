@@ -24,11 +24,12 @@ model Contrato {
 }
 
 model Restaurante {
-  id       Int     @id @default(autoincrement())
-  nome     String
-  telefone String  // somente dígitos, ex: 5565999998888
-  ativo    Boolean @default(true)
-  criadoEm DateTime @default(now())
+  id                 Int     @id @default(autoincrement())
+  nome               String
+  telefone           String  // somente dígitos, ex: 5565999998888
+  linkGrupoWhatsApp  String? // link de convite do grupo, ex: https://chat.whatsapp.com/XXXXX
+  ativo              Boolean @default(true)
+  criadoEm           DateTime @default(now())
 
   pedidos   Pedido[]
   contratos Contrato[]

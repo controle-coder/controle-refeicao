@@ -57,3 +57,20 @@ export function gerarLinkWhatsApp(telefone: string, mensagem: string): string {
   const tel = telefone.replace(/\D/g, '')
   return `https://wa.me/${tel}?text=${encodeURIComponent(mensagem)}`
 }
+
+/**
+ * Para grupos: WhatsApp não suporta texto pré-preenchido em links de grupo.
+ * A solução é copiar a mensagem para a área de transferência e abrir o grupo.
+ * Retorna true se copiou com sucesso.
+ */
+export async function enviarParaGrupo(linkGrupo: string, mensagem: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(mensagem)
+    window.open(linkGrupo, '_blank')
+    return true
+  } catch {
+    // Fallback: abre o grupo mesmo sem copiar
+    window.open(linkGrupo, '_blank')
+    return false
+  }
+}

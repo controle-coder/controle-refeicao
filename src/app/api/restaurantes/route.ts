@@ -6,6 +6,7 @@ import { z } from 'zod'
 const schema = z.object({
   nome: z.string().min(1),
   telefone: z.string().min(10).regex(/^\d+$/, 'Apenas dígitos'),
+  linkGrupoWhatsApp: z.string().optional().nullable(),
 })
 
 export async function GET() {

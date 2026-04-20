@@ -4,9 +4,9 @@ export default function PedidosLayout({ children }: { children: React.ReactNode 
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-green-700 text-white px-4 py-3 flex items-center justify-between shadow">
-        <Link href="/pedidos/novo" className="font-bold text-lg">
+        <a href="/pedidos/novo" className="font-bold text-lg">
           🍽️ Pedidos de Refeição
-        </Link>
+        </a>
         <Link
           href="/login"
           className="text-green-200 hover:text-white text-sm"
