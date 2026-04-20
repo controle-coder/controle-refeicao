@@ -78,6 +78,16 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
   function podeEditarAgora(): boolean {
     if (pedido.status === 'CANCELADO') return false
     const tipos = versaoAtual?.itens.map((i) => i.tipoRefeicao) ?? []
+
+    const hoje = new Date().toISOString().split('T')[0]
+    const dataRef = new Date(pedido.dataRefeicao).toISOString().split('T')[0]
+
+    // Dia futuro: sempre editável
+    if (dataRef > hoje) return true
+    // Dia passado: não editável
+    if (dataRef < hoje) return false
+
+    // Mesmo dia: verifica horário de corte
     const min = new Date().getHours() * 60 + new Date().getMinutes()
     if (tipos.includes('CAFE_MANHA') && min >= 19 * 60 + 30) return false
     if (tipos.includes('ALMOCO') && min >= 8 * 60) return false

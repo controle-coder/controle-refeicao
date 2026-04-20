@@ -15,9 +15,17 @@ function minutosAgora() {
   return d.getHours() * 60 + d.getMinutes()
 }
 
-function podeEditarTipos(tipos: string[]): boolean {
+function podeEditarPedido(dataRefeicao: string, tipos: string[], status: string): boolean {
+  if (status === 'CANCELADO') return false
+
+  const hoje = new Date().toISOString().split('T')[0]
+  const dataRef = new Date(dataRefeicao).toISOString().split('T')[0]
+
+  if (dataRef > hoje) return true
+  if (dataRef < hoje) return false
+
   const min = minutosAgora()
-  if (tipos.includes('CAFE_MANHA')) return false
+  if (tipos.includes('CAFE_MANHA') && min >= 19 * 60 + 30) return false
   if (tipos.includes('ALMOCO') && min >= 8 * 60) return false
   if (tipos.includes('JANTAR') && min >= 16 * 60) return false
   return true
@@ -61,6 +69,7 @@ interface PedidoResumo {
   id: number
   status: string
   criadoEm: string
+  dataRefeicao: string
   restaurante: { nome: string }
   versoes: Array<{ itens: Array<{ quantidade: number; tipoRefeicao: string }> }>
 }
@@ -287,8 +296,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                 {pedidosHistorico.slice(0, 8).map((p) => {
                   const totalItens = p.versoes[0]?.itens.reduce((s, i) => s + i.quantidade, 0) ?? 0
                   const tipos = p.versoes[0]?.itens.map((i) => i.tipoRefeicao) ?? []
-                  const dentroDoprazo =
-                    p.status !== 'CANCELADO' && podeEditarTipos(tipos)
+                  const dentroDoprazo = podeEditarPedido(p.dataRefeicao, tipos, p.status)
                   return (
                     <div key={p.id} className="border rounded-lg p-3 space-y-2">
                       {/* Cabeçalho: id + status + data */}
