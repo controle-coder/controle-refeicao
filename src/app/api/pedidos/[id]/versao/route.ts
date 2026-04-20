@@ -34,13 +34,15 @@ export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos
     const mes = ref.getUTCMonth()
     const dia = ref.getUTCDate()
 
-    if (tipos.includes('CAFE_MANHA') && agora >= new Date(ano, mes, dia - 1, 19, 30)) {
+    // Deadlines em UTC usando offset BRT (UTC-4):
+    // 19:30 UTC-4 = 23:30 UTC | 08:00 UTC-4 = 12:00 UTC | 16:00 UTC-4 = 20:00 UTC
+    if (tipos.includes('CAFE_MANHA') && agora >= new Date(Date.UTC(ano, mes, dia - 1, 23, 30))) {
       return Response.json({ error: 'Prazo de edição do Café da Manhã encerrado às 19:30 do dia anterior' }, { status: 400 })
     }
-    if (tipos.includes('ALMOCO') && agora >= new Date(ano, mes, dia, 8, 0)) {
+    if (tipos.includes('ALMOCO') && agora >= new Date(Date.UTC(ano, mes, dia, 12, 0))) {
       return Response.json({ error: 'Prazo de edição do Almoço encerrado às 8:00 do dia da retirada' }, { status: 400 })
     }
-    if (tipos.includes('JANTAR') && agora >= new Date(ano, mes, dia, 16, 0)) {
+    if (tipos.includes('JANTAR') && agora >= new Date(Date.UTC(ano, mes, dia, 20, 0))) {
       return Response.json({ error: 'Prazo de edição do Jantar encerrado às 16:00 do dia da retirada' }, { status: 400 })
     }
 
