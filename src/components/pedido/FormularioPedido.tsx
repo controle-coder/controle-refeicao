@@ -18,16 +18,17 @@ function minutosAgora() {
 function podeEditarPedido(dataRefeicao: string, tipos: string[], status: string): boolean {
   if (status === 'CANCELADO') return false
 
-  const hoje = new Date().toISOString().split('T')[0]
-  const dataRef = new Date(dataRefeicao).toISOString().split('T')[0]
+  const agora = new Date()
+  const ref = new Date(dataRefeicao)
+  const ano = ref.getUTCFullYear()
+  const mes = ref.getUTCMonth()
+  const dia = ref.getUTCDate()
 
-  if (dataRef > hoje) return true
-  if (dataRef < hoje) return false
-
-  const min = minutosAgora()
-  if (tipos.includes('CAFE_MANHA') && min >= 19 * 60 + 30) return false
-  if (tipos.includes('ALMOCO') && min >= 8 * 60) return false
-  if (tipos.includes('JANTAR') && min >= 16 * 60) return false
+  for (const tipo of tipos) {
+    if (tipo === 'CAFE_MANHA' && agora >= new Date(ano, mes, dia - 1, 19, 30)) return false
+    if (tipo === 'ALMOCO'     && agora >= new Date(ano, mes, dia, 8, 0))        return false
+    if (tipo === 'JANTAR'     && agora >= new Date(ano, mes, dia, 16, 0))       return false
+  }
   return true
 }
 

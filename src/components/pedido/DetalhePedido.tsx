@@ -79,19 +79,21 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
     if (pedido.status === 'CANCELADO') return false
     const tipos = versaoAtual?.itens.map((i) => i.tipoRefeicao) ?? []
 
-    const hoje = new Date().toISOString().split('T')[0]
-    const dataRef = new Date(pedido.dataRefeicao).toISOString().split('T')[0]
+    const agora = new Date()
+    // dataRefeicao armazenado ao meio-dia UTC → getUTC* retorna a data correta
+    const ref = new Date(pedido.dataRefeicao)
+    const ano = ref.getUTCFullYear()
+    const mes = ref.getUTCMonth()
+    const dia = ref.getUTCDate()
 
-    // Dia futuro: sempre editável
-    if (dataRef > hoje) return true
-    // Dia passado: não editável
-    if (dataRef < hoje) return false
-
-    // Mesmo dia: verifica horário de corte
-    const min = new Date().getHours() * 60 + new Date().getMinutes()
-    if (tipos.includes('CAFE_MANHA') && min >= 19 * 60 + 30) return false
-    if (tipos.includes('ALMOCO') && min >= 8 * 60) return false
-    if (tipos.includes('JANTAR') && min >= 16 * 60) return false
+    for (const tipo of tipos) {
+      // Café da Manhã: corte 19:30 do dia anterior à retirada
+      if (tipo === 'CAFE_MANHA' && agora >= new Date(ano, mes, dia - 1, 19, 30)) return false
+      // Almoço: corte 08:00 do dia da retirada
+      if (tipo === 'ALMOCO'     && agora >= new Date(ano, mes, dia, 8, 0))        return false
+      // Jantar: corte 16:00 do dia da retirada
+      if (tipo === 'JANTAR'     && agora >= new Date(ano, mes, dia, 16, 0))       return false
+    }
     return true
   }
 
@@ -247,10 +249,10 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
                 ) : (
                   <p className="text-xs text-gray-400 text-center py-1">
                     {versaoAtual?.itens.some((i) => i.tipoRefeicao === 'CAFE_MANHA')
-                      ? 'Prazo de edição do Café da Manhã encerrado às 19:30'
+                      ? 'Prazo de edição do Café da Manhã encerrado às 19:30 do dia anterior'
                       : versaoAtual?.itens.some((i) => i.tipoRefeicao === 'ALMOCO')
-                      ? 'Prazo de edição do Almoço encerrado às 8:00'
-                      : 'Prazo de edição do Jantar encerrado às 16:00'}
+                      ? 'Prazo de edição do Almoço encerrado às 8:00 do dia da retirada'
+                      : 'Prazo de edição do Jantar encerrado às 16:00 do dia da retirada'}
                   </p>
                 )}
                 {(sessaoRole === 'ADMIN') && (
