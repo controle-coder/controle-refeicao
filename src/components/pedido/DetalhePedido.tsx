@@ -136,8 +136,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
         setErro(data.error || 'Erro ao salvar')
         return
       }
-      router.refresh()
-      setEditando(false)
+      window.location.href = window.location.href
     } catch {
       setErro('Erro de conexão')
     } finally {
