@@ -80,18 +80,14 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
     const tipos = versaoAtual?.itens.map((i) => i.tipoRefeicao) ?? []
 
     const agora = new Date()
-    // dataRefeicao armazenado ao meio-dia UTC → getUTC* retorna a data correta
     const ref = new Date(pedido.dataRefeicao)
     const ano = ref.getUTCFullYear()
     const mes = ref.getUTCMonth()
     const dia = ref.getUTCDate()
 
     for (const tipo of tipos) {
-      // Café da Manhã: corte 19:30 do dia anterior à retirada
       if (tipo === 'CAFE_MANHA' && agora >= new Date(ano, mes, dia - 1, 19, 30)) return false
-      // Almoço: corte 08:00 do dia da retirada
       if (tipo === 'ALMOCO'     && agora >= new Date(ano, mes, dia, 8, 0))        return false
-      // Jantar: corte 16:00 do dia da retirada
       if (tipo === 'JANTAR'     && agora >= new Date(ano, mes, dia, 16, 0))       return false
     }
     return true

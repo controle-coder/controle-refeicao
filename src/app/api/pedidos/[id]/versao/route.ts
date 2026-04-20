@@ -28,15 +28,20 @@ export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos
     if (!pedido) return Response.json({ error: 'Não encontrado' }, { status: 404 })
 
     const tipos = pedido.versoes[0]?.itens.map((i) => i.tipoRefeicao) ?? []
-    const min = new Date().getHours() * 60 + new Date().getMinutes()
-    if (tipos.includes('CAFE_MANHA') && min >= 19 * 60 + 30) {
-      return Response.json({ error: 'Prazo de edição do Café da Manhã encerrado às 19:30' }, { status: 400 })
+    const agora = new Date()
+    const ref = new Date(pedido.dataRefeicao)
+    const ano = ref.getUTCFullYear()
+    const mes = ref.getUTCMonth()
+    const dia = ref.getUTCDate()
+
+    if (tipos.includes('CAFE_MANHA') && agora >= new Date(ano, mes, dia - 1, 19, 30)) {
+      return Response.json({ error: 'Prazo de edição do Café da Manhã encerrado às 19:30 do dia anterior' }, { status: 400 })
     }
-    if (tipos.includes('ALMOCO') && min >= 8 * 60) {
-      return Response.json({ error: 'Prazo de edição do Almoço encerrado às 8:00' }, { status: 400 })
+    if (tipos.includes('ALMOCO') && agora >= new Date(ano, mes, dia, 8, 0)) {
+      return Response.json({ error: 'Prazo de edição do Almoço encerrado às 8:00 do dia da retirada' }, { status: 400 })
     }
-    if (tipos.includes('JANTAR') && min >= 16 * 60) {
-      return Response.json({ error: 'Prazo de edição do Jantar encerrado às 16:00' }, { status: 400 })
+    if (tipos.includes('JANTAR') && agora >= new Date(ano, mes, dia, 16, 0)) {
+      return Response.json({ error: 'Prazo de edição do Jantar encerrado às 16:00 do dia da retirada' }, { status: 400 })
     }
 
     await criarNovaVersao({
