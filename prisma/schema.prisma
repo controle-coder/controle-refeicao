@@ -55,8 +55,9 @@ model Requisitante {
   ativo     Boolean  @default(true)
   criadoEm  DateTime @default(now())
 
-  pedidos        Pedido[]
-  versoesCriadas VersaoPedido[]
+  pedidos           Pedido[]       @relation("PedidoRequisitante")
+  versoesCriadas    VersaoPedido[]
+  pedidosCancelados Pedido[]       @relation("PedidoCancelador")
 }
 
 enum Role {
@@ -76,11 +77,15 @@ model Pedido {
   turmaId        Int
   turma          Turma       @relation(fields: [turmaId], references: [id])
   requisitanteId Int
-  requisitante   Requisitante @relation(fields: [requisitanteId], references: [id])
+  requisitante   Requisitante @relation("PedidoRequisitante", fields: [requisitanteId], references: [id])
   versaoAtual    Int      @default(1)
   status         Status   @default(ABERTO)
   criadoEm       DateTime @default(now())
   atualizadoEm   DateTime @updatedAt
+
+  canceladoPorId     Int?
+  canceladoPor       Requisitante? @relation("PedidoCancelador", fields: [canceladoPorId], references: [id])
+  motivoCancelamento String?
 
   versoes VersaoPedido[]
 }
