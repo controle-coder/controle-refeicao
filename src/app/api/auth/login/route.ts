@@ -12,7 +12,8 @@ const schema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { login, pin } = schema.parse(body)
+    const { login: loginRaw, pin } = schema.parse(body)
+    const login = loginRaw.trim().toLowerCase()
 
     const requisitante = await prisma.requisitante.findUnique({
       where: { login },
