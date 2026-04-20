@@ -67,6 +67,31 @@ export async function criarNovaVersao(input: CriarNovaVersaoInput) {
       throw new Error('Pedido cancelado não pode ser editado')
     }
 
+    // Buscar itens da versão atual para mesclar
+    const versaoAtual = await tx.versaoPedido.findFirst({
+      where: { pedidoId: pedido.id, numero: pedido.versaoAtual },
+      include: { itens: true },
+    })
+    const itensAnteriores = versaoAtual?.itens ?? []
+
+    // Tipos mencionados no input (enviados pelo usuário)
+    const tiposNoInput = new Set(input.itens.map((i) => i.tipoRefeicao))
+
+    // Mescla:
+    // - Itens do input com quantidade > 0 → usam o novo valor
+    // - Itens do input com quantidade = 0 → removidos (intencionalmente zerados)
+    // - Itens da versão anterior NÃO mencionados no input → carregados automaticamente
+    const itensMesclados: ItemInput[] = [
+      ...input.itens.filter((i) => i.quantidade > 0),
+      ...itensAnteriores
+        .filter((i) => !tiposNoInput.has(i.tipoRefeicao) && i.quantidade > 0)
+        .map((i) => ({ tipoRefeicao: i.tipoRefeicao, quantidade: i.quantidade })),
+    ]
+
+    if (itensMesclados.length === 0) {
+      throw new Error('A nova versão precisa ter pelo menos uma refeição')
+    }
+
     const novoNumero = pedido.versaoAtual + 1
 
     const versao = await tx.versaoPedido.create({
@@ -76,12 +101,10 @@ export async function criarNovaVersao(input: CriarNovaVersaoInput) {
         observacao: input.observacao,
         criadoPorId: input.usuarioId,
         itens: {
-          create: input.itens
-            .filter((i) => i.quantidade > 0)
-            .map((i) => ({
-              tipoRefeicao: i.tipoRefeicao,
-              quantidade: i.quantidade,
-            })),
+          create: itensMesclados.map((i) => ({
+            tipoRefeicao: i.tipoRefeicao,
+            quantidade: i.quantidade,
+          })),
         },
       },
       include: { itens: true },

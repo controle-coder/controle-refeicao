@@ -105,9 +105,11 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
     }
     setCarregando(true)
     try {
-      const itens = TIPOS_REFEICAO.filter((t) => (quantidades[t.valor] ?? 0) > 0).map((t) => ({
+      // Envia TODOS os tipos (incluindo zeros) para que o servidor saiba
+      // quais foram zerados intencionalmente vs. quais não foram tocados
+      const itens = TIPOS_REFEICAO.map((t) => ({
         tipoRefeicao: t.valor,
-        quantidade: quantidades[t.valor],
+        quantidade: quantidades[t.valor] ?? 0,
       }))
       const res = await fetch(`/api/pedidos/${pedido.id}/versao`, {
         method: 'POST',
