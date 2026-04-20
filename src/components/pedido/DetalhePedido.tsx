@@ -78,7 +78,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
     if (pedido.status === 'CANCELADO') return false
     const tipos = versaoAtual?.itens.map((i) => i.tipoRefeicao) ?? []
     const min = new Date().getHours() * 60 + new Date().getMinutes()
-    if (tipos.includes('CAFE_MANHA')) return false
+    if (tipos.includes('CAFE_MANHA') && min >= 19 * 60 + 30) return false
     if (tipos.includes('ALMOCO') && min >= 8 * 60) return false
     if (tipos.includes('JANTAR') && min >= 16 * 60) return false
     return true
@@ -230,7 +230,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
                 ) : (
                   <p className="text-xs text-gray-400 text-center py-1">
                     {versaoAtual?.itens.some((i) => i.tipoRefeicao === 'CAFE_MANHA')
-                      ? 'Pedido de Café da Manhã não permite edição'
+                      ? 'Prazo de edição do Café da Manhã encerrado às 19:30'
                       : versaoAtual?.itens.some((i) => i.tipoRefeicao === 'ALMOCO')
                       ? 'Prazo de edição do Almoço encerrado às 8:00'
                       : 'Prazo de edição do Jantar encerrado às 16:00'}

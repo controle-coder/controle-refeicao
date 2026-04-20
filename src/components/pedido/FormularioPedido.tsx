@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TipoRefeicao } from '@/generated/prisma/enums'
 
@@ -35,6 +35,12 @@ const STATUS_COLORS: Record<string, string> = {
   ENVIADO: 'bg-blue-100 text-blue-800',
   CONFIRMADO: 'bg-green-100 text-green-800',
   CANCELADO: 'bg-red-100 text-red-800',
+}
+
+const TIPO_LABELS: Record<string, string> = {
+  CAFE_MANHA: 'Café da Manhã',
+  ALMOCO: 'Almoço',
+  JANTAR: 'Jantar',
 }
 
 interface Restaurante { id: number; nome: string; telefone: string }
@@ -85,6 +91,23 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
 
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
+
+  useEffect(() => {
+    function handlePageShow(e: PageTransitionEvent) {
+      if (e.persisted) {
+        setEtapa(1)
+        setHistoricoAberto(false)
+        setRequisitanteId(0)
+        setFazendaId(0)
+        setTurmaId(0)
+        setPedidosHistorico([])
+        setQuantidades({})
+        setObservacao('')
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
+  }, [])
 
   const requisitante = requisitantes.find((r) => r.id === requisitanteId)
   const turmasFiltradas = fazendaId ? turmas.filter((t) => t.fazendaId === fazendaId) : turmas
@@ -229,7 +252,8 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                   const dentroDoprazo =
                     p.status !== 'CANCELADO' && podeEditarTipos(tipos)
                   return (
-                    <div key={p.id} className="border rounded-lg p-3">
+                    <div key={p.id} className="border rounded-lg p-3 space-y-2">
+                      {/* Cabeçalho: id + status + data */}
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-gray-800 text-sm">Pedido #{p.id}</span>
@@ -241,21 +265,39 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                           {new Date(p.criadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {p.restaurante.nome} · {totalItens} refeição{totalItens !== 1 ? 'ões' : ''}
-                      </p>
-                      <div className="mt-2">
-                        <a
-                          href={`/pedidos/${p.id}`}
-                          className={`inline-block text-xs px-3 py-1 rounded border transition-colors ${
-                            dentroDoprazo
-                              ? 'border-green-500 text-green-700 hover:bg-green-50'
-                              : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                          }`}
-                        >
-                          {dentroDoprazo ? 'Ver / Editar' : 'Ver'}
-                        </a>
-                      </div>
+
+                      {/* Restaurante */}
+                      <p className="text-xs text-gray-500">{p.restaurante.nome}</p>
+
+                      {/* Itens: tipo e quantidade */}
+                      {p.versoes[0]?.itens.length > 0 && (
+                        <div className="bg-gray-50 rounded-md px-3 py-2 space-y-1">
+                          {p.versoes[0].itens.map((item, idx) => (
+                            <div key={idx} className="flex justify-between text-xs">
+                              <span className="text-gray-600">{TIPO_LABELS[item.tipoRefeicao] ?? item.tipoRefeicao}</span>
+                              <span className="font-semibold text-gray-800">
+                                {item.quantidade} refeição{item.quantidade !== 1 ? 'ões' : ''}
+                              </span>
+                            </div>
+                          ))}
+                          <div className="border-t pt-1 flex justify-between text-xs font-semibold text-gray-700">
+                            <span>Total</span>
+                            <span>{totalItens}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Botão ver/editar */}
+                      <a
+                        href={`/pedidos/${p.id}`}
+                        className={`inline-block text-xs px-3 py-1 rounded border transition-colors ${
+                          dentroDoprazo
+                            ? 'border-green-500 text-green-700 hover:bg-green-50'
+                            : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        {dentroDoprazo ? 'Ver / Editar' : 'Ver'}
+                      </a>
                     </div>
                   )
                 })}

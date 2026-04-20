@@ -1,12 +1,9 @@
-import 'dotenv/config'
 import { PrismaClient } from '../src/generated/prisma/client'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { PrismaNeon } from '@prisma/adapter-neon'
 import bcrypt from 'bcryptjs'
-import path from 'path'
 
-const dbPath = process.env.DATABASE_URL?.replace('file:', '') ?? path.resolve(process.cwd(), 'dev.db')
 const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url: `file:${dbPath}` }),
+  adapter: new PrismaNeon({ connectionString: process.env.DATABASE_URL }),
 })
 
 async function main() {

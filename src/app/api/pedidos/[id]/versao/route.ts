@@ -29,8 +29,8 @@ export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos
 
     const tipos = pedido.versoes[0]?.itens.map((i) => i.tipoRefeicao) ?? []
     const min = new Date().getHours() * 60 + new Date().getMinutes()
-    if (tipos.includes('CAFE_MANHA')) {
-      return Response.json({ error: 'Pedido de Café da Manhã não permite edição' }, { status: 400 })
+    if (tipos.includes('CAFE_MANHA') && min >= 19 * 60 + 30) {
+      return Response.json({ error: 'Prazo de edição do Café da Manhã encerrado às 19:30' }, { status: 400 })
     }
     if (tipos.includes('ALMOCO') && min >= 8 * 60) {
       return Response.json({ error: 'Prazo de edição do Almoço encerrado às 8:00' }, { status: 400 })

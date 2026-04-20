@@ -42,14 +42,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 {item.label}
               </Link>
             ))}
-            <div className="pt-2 mt-2 border-t border-gray-700">
-              <Link
-                href="/pedidos"
-                className="block px-3 py-2 rounded bg-green-700 hover:bg-green-600 text-white font-medium transition-colors"
-              >
-                🛒 Tela de Pedidos
-              </Link>
-            </div>
           </div>
         </nav>
         <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
