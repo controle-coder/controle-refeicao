@@ -9,7 +9,17 @@ export default async function NovoPedidoPage() {
     prisma.turma.findMany({ where: { ativo: true }, include: { fazenda: true }, orderBy: { nome: 'asc' } }),
     prisma.requisitante.findMany({
       where: { ativo: true, role: 'REQUISITANTE' },
-      include: { fazenda: true, turma: true },
+      include: {
+        fazenda: true,
+        turma: true,
+        contrato: {
+          include: {
+            fazendas: { select: { id: true } },
+            restaurantes: { select: { id: true } },
+            turmas: { select: { id: true } },
+          },
+        },
+      },
       orderBy: { nome: 'asc' },
     }),
   ])

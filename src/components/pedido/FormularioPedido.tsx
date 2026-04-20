@@ -46,10 +46,16 @@ const TIPO_LABELS: Record<string, string> = {
 interface Restaurante { id: number; nome: string; telefone: string }
 interface Fazenda { id: number; nome: string }
 interface Turma { id: number; nome: string; fazendaId: number; fazenda: { nome: string } }
+interface ContratoVinculos {
+  fazendas: { id: number }[]
+  restaurantes: { id: number }[]
+  turmas: { id: number }[]
+}
 interface Requisitante {
   id: number; nome: string
   fazendaId: number; fazenda: { nome: string }
   turmaId: number; turma: { nome: string }
+  contrato: ContratoVinculos | null
 }
 interface PedidoResumo {
   id: number
@@ -110,7 +116,23 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
   }, [])
 
   const requisitante = requisitantes.find((r) => r.id === requisitanteId)
-  const turmasFiltradas = fazendaId ? turmas.filter((t) => t.fazendaId === fazendaId) : turmas
+  const contrato = requisitante?.contrato ?? null
+
+  // Filtra por contrato se o requisitante tiver um; senão mostra todos ativos
+  const restaurantesFiltrados = contrato
+    ? restaurantes.filter((r) => contrato.restaurantes.some((cr) => cr.id === r.id))
+    : restaurantes
+  const fazendasFiltradas = contrato
+    ? fazendas.filter((f) => contrato.fazendas.some((cf) => cf.id === f.id))
+    : fazendas
+  const turmasFiltradas = (() => {
+    let lista = contrato
+      ? turmas.filter((t) => contrato.turmas.some((ct) => ct.id === t.id))
+      : turmas
+    if (fazendaId) lista = lista.filter((t) => t.fazendaId === fazendaId)
+    return lista
+  })()
+
   const totalRefeicoes = Object.values(quantidades).reduce((s, v) => s + v, 0)
 
   async function selecionarRequisitante(id: number) {
@@ -319,7 +341,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
         {etapa === 2 && (
           <div className="space-y-3">
             <p className="text-sm text-gray-500">Selecione o restaurante:</p>
-            {restaurantes.map((r) => (
+            {restaurantesFiltrados.map((r) => (
               <button
                 key={r.id}
                 onClick={() => { setRestauranteId(r.id); setEtapa(3) }}
@@ -329,8 +351,8 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                 <div className="text-sm text-gray-500">📞 {r.telefone}</div>
               </button>
             ))}
-            {restaurantes.length === 0 && (
-              <p className="text-center text-gray-400 py-8">Nenhum restaurante cadastrado</p>
+            {restaurantesFiltrados.length === 0 && (
+              <p className="text-center text-gray-400 py-8">Nenhum restaurante disponível para este contrato</p>
             )}
             <button onClick={() => { setEtapa(1); setHistoricoAberto(true) }} className="w-full border text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
               ← Voltar
@@ -355,7 +377,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value={0}>Selecione...</option>
-                {fazendas.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                {fazendasFiltradas.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
               </select>
             </div>
             <div>

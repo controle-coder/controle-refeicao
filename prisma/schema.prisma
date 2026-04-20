@@ -18,6 +18,9 @@ model Contrato {
   criadoEm  DateTime @default(now())
 
   requisitantes Requisitante[]
+  fazendas      Fazenda[]
+  restaurantes  Restaurante[]
+  turmas        Turma[]
 }
 
 model Restaurante {
@@ -27,7 +30,8 @@ model Restaurante {
   ativo    Boolean @default(true)
   criadoEm DateTime @default(now())
 
-  pedidos Pedido[]
+  pedidos   Pedido[]
+  contratos Contrato[]
 }
 
 model Fazenda {
@@ -39,6 +43,7 @@ model Fazenda {
   turmas        Turma[]
   requisitantes Requisitante[]
   pedidos       Pedido[]
+  contratos     Contrato[]
 }
 
 model Turma {
@@ -51,6 +56,7 @@ model Turma {
 
   requisitantes Requisitante[]
   pedidos       Pedido[]
+  contratos     Contrato[]
 }
 
 model Requisitante {
