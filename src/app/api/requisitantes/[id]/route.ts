@@ -10,6 +10,7 @@ const schema = z.object({
   role: z.enum(['ADMIN', 'REQUISITANTE']).optional(),
   fazendaId: z.number().int().positive().optional(),
   turmaId: z.number().int().positive().optional(),
+  contratoId: z.number().int().positive().optional().nullable(),
   ativo: z.boolean().optional(),
 })
 
@@ -26,7 +27,7 @@ export async function PUT(request: NextRequest, ctx: RouteContext<'/api/requisit
     const item = await prisma.requisitante.update({
       where: { id: Number(id) },
       data: updateData,
-      include: { fazenda: true, turma: true },
+      include: { fazenda: true, turma: true, contrato: true },
     })
     return Response.json({ ...item, pinHash: undefined })
   } catch (e: any) {

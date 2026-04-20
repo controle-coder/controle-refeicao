@@ -9,6 +9,17 @@ datasource db {
 
 // ─── Entidades base ──────────────────────────────────────────────────────────
 
+model Contrato {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  numero    String?
+  descricao String?
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  requisitantes Requisitante[]
+}
+
 model Restaurante {
   id       Int     @id @default(autoincrement())
   nome     String
@@ -43,17 +54,19 @@ model Turma {
 }
 
 model Requisitante {
-  id        Int    @id @default(autoincrement())
-  nome      String
-  login     String @unique
-  pinHash   String
-  role      Role   @default(REQUISITANTE)
-  fazendaId Int
-  fazenda   Fazenda @relation(fields: [fazendaId], references: [id])
-  turmaId   Int
-  turma     Turma   @relation(fields: [turmaId], references: [id])
-  ativo     Boolean  @default(true)
-  criadoEm  DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  nome       String
+  login      String   @unique
+  pinHash    String
+  role       Role     @default(REQUISITANTE)
+  fazendaId  Int
+  fazenda    Fazenda  @relation(fields: [fazendaId], references: [id])
+  turmaId    Int
+  turma      Turma    @relation(fields: [turmaId], references: [id])
+  contratoId Int?
+  contrato   Contrato? @relation(fields: [contratoId], references: [id])
+  ativo      Boolean  @default(true)
+  criadoEm  DateTime  @default(now())
 
   pedidos           Pedido[]       @relation("PedidoRequisitante")
   versoesCriadas    VersaoPedido[]

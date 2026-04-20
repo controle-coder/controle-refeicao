@@ -8,6 +8,7 @@ const navItems = [
   { href: '/admin/restaurantes', label: '🍴 Restaurantes' },
   { href: '/admin/fazendas', label: '🏭 Fazendas' },
   { href: '/admin/turmas', label: '👥 Turmas' },
+  { href: '/admin/contratos', label: '📄 Contratos' },
   { href: '/admin/requisitantes', label: '👤 Requisitantes' },
   { href: '/admin/pedidos', label: '📋 Pedidos' },
   { href: '/admin/relatorios', label: '📈 Relatórios' },

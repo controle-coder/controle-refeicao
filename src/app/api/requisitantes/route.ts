@@ -11,6 +11,7 @@ const schema = z.object({
   role: z.enum(['ADMIN', 'REQUISITANTE']).default('REQUISITANTE'),
   fazendaId: z.number().int().positive(),
   turmaId: z.number().int().positive(),
+  contratoId: z.number().int().positive().optional().nullable(),
 })
 
 export async function GET(request: NextRequest) {
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
         ...(fazendaId ? { fazendaId: Number(fazendaId) } : {}),
         ...(turmaId ? { turmaId: Number(turmaId) } : {}),
       },
-      include: { fazenda: true, turma: true },
+      include: { fazenda: true, turma: true, contrato: true },
       orderBy: { nome: 'asc' },
     })
     return Response.json(items.map((r) => ({ ...r, pinHash: undefined })))
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     const pinHash = await bcrypt.hash(pin, 10)
     const item = await prisma.requisitante.create({
       data: { ...rest, pinHash },
-      include: { fazenda: true, turma: true },
+      include: { fazenda: true, turma: true, contrato: true },
     })
     return Response.json({ ...item, pinHash: undefined }, { status: 201 })
   } catch (e: any) {
