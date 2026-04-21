@@ -89,6 +89,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
   const [carregando, setCarregando] = useState(false)
   const [tipoFiltro, setTipoFiltro] = useState<string>('TODOS')
   const [confirmando, setConfirmando] = useState<number | null>(null)
+  const [erroConfirmar, setErroConfirmar] = useState<number | null>(null)
   const [semana, setSemana] = useState<DiaSemana[] | null>(null)
   const [carregandoSemana, setCarregandoSemana] = useState(false)
   const [mostrarSemana, setMostrarSemana] = useState(false)
@@ -128,13 +129,22 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
 
   async function confirmar(id: number) {
     setConfirmando(id)
+    setErroConfirmar(null)
     try {
       const res = await fetch(`/api/restaurante/pedidos/${id}/confirmar`, { method: 'PATCH' })
       if (res.ok) {
         setPedidos((prev) =>
           prev.map((p) => (p.id === id ? { ...p, status: 'CONFIRMADO' } : p))
         )
+      } else {
+        const json = await res.json().catch(() => ({}))
+        console.error('Erro ao confirmar:', res.status, json)
+        setErroConfirmar(id)
+        setTimeout(() => setErroConfirmar(null), 4000)
       }
+    } catch {
+      setErroConfirmar(id)
+      setTimeout(() => setErroConfirmar(null), 4000)
     } finally {
       setConfirmando(null)
     }
@@ -425,17 +435,37 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
 
                 {/* Botão confirmar */}
                 {!isConfirmado && (
-                  <button
-                    onClick={() => confirmar(pedido.id)}
-                    disabled={confirmando === pedido.id}
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold py-2 rounded-lg transition-colors print:hidden"
-                  >
-                    {confirmando === pedido.id ? 'Confirmando...' : '✓ Confirmar Recebimento'}
-                  </button>
+                  <div className="print:hidden">
+                    <button
+                      onClick={() => confirmar(pedido.id)}
+                      disabled={confirmando === pedido.id}
+                      className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-green-400 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      {confirmando === pedido.id ? (
+                        <>
+                          <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                          </svg>
+                          Confirmando...
+                        </>
+                      ) : '✓ Confirmar Recebimento'}
+                    </button>
+                    {erroConfirmar === pedido.id && (
+                      <p className="text-center text-xs text-red-600 mt-1.5">
+                        Erro ao confirmar. Tente novamente ou recarregue a página.
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {isConfirmado && (
-                  <p className="text-center text-xs text-green-600 font-medium py-1 print:hidden">✓ Recebimento confirmado</p>
+                  <div className="print:hidden flex items-center justify-center gap-1.5 bg-green-100 text-green-700 rounded-lg py-2.5">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span className="text-sm font-semibold">Recebimento confirmado</span>
+                  </div>
                 )}
               </div>
             )
