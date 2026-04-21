@@ -8,6 +8,9 @@ interface Restaurante {
   nome: string
   telefone: string
   linkGrupoWhatsApp: string | null
+  precoCafeManha: number | null
+  precoAlmoco: number | null
+  precoJantar: number | null
   ativo: boolean
 }
 
@@ -16,20 +19,27 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
   const [items, setItems] = useState(initial)
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<Restaurante | null>(null)
-  const [form, setForm] = useState({ nome: '', telefone: '', linkGrupoWhatsApp: '' })
+  const [form, setForm] = useState({ nome: '', telefone: '', linkGrupoWhatsApp: '', precoCafeManha: '', precoAlmoco: '', precoJantar: '' })
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
 
   function abrirNovo() {
     setEditando(null)
-    setForm({ nome: '', telefone: '', linkGrupoWhatsApp: '' })
+    setForm({ nome: '', telefone: '', linkGrupoWhatsApp: '', precoCafeManha: '', precoAlmoco: '', precoJantar: '' })
     setErro('')
     setModalAberto(true)
   }
 
   function abrirEditar(item: Restaurante) {
     setEditando(item)
-    setForm({ nome: item.nome, telefone: item.telefone, linkGrupoWhatsApp: item.linkGrupoWhatsApp ?? '' })
+    setForm({
+      nome: item.nome,
+      telefone: item.telefone,
+      linkGrupoWhatsApp: item.linkGrupoWhatsApp ?? '',
+      precoCafeManha: item.precoCafeManha != null ? String(item.precoCafeManha) : '',
+      precoAlmoco: item.precoAlmoco != null ? String(item.precoAlmoco) : '',
+      precoJantar: item.precoJantar != null ? String(item.precoJantar) : '',
+    })
     setErro('')
     setModalAberto(true)
   }
@@ -44,6 +54,10 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
     try {
       const url = editando ? `/api/restaurantes/${editando.id}` : '/api/restaurantes'
       const method = editando ? 'PUT' : 'POST'
+      const parsePreco = (v: string) => {
+        const n = parseFloat(v.replace(',', '.'))
+        return isNaN(n) ? null : n
+      }
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -51,6 +65,9 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
           nome: form.nome,
           telefone: form.telefone,
           linkGrupoWhatsApp: form.linkGrupoWhatsApp.trim() || null,
+          precoCafeManha: parsePreco(form.precoCafeManha),
+          precoAlmoco: parsePreco(form.precoAlmoco),
+          precoJantar: parsePreco(form.precoJantar),
         }),
       })
       if (!res.ok) {
@@ -99,6 +116,7 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
             <tr>
               <th className="px-4 py-3 text-left">Nome</th>
               <th className="px-4 py-3 text-left">Telefone</th>
+              <th className="px-4 py-3 text-left">Preços (R$)</th>
               <th className="px-4 py-3 text-left">Grupo WhatsApp</th>
               <th className="px-4 py-3 text-center">Status</th>
               <th className="px-4 py-3 text-right">Ações</th>
@@ -109,6 +127,14 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
               <tr key={item.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-800">{item.nome}</td>
                 <td className="px-4 py-3 text-gray-500">{item.telefone}</td>
+                <td className="px-4 py-3 text-gray-500 text-xs space-y-0.5">
+                  {item.precoCafeManha != null && <div>☕ R$ {item.precoCafeManha.toFixed(2).replace('.', ',')}</div>}
+                  {item.precoAlmoco != null && <div>🍽️ R$ {item.precoAlmoco.toFixed(2).replace('.', ',')}</div>}
+                  {item.precoJantar != null && <div>🌙 R$ {item.precoJantar.toFixed(2).replace('.', ',')}</div>}
+                  {item.precoCafeManha == null && item.precoAlmoco == null && item.precoJantar == null && (
+                    <span className="text-gray-300">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-gray-500">
                   {item.linkGrupoWhatsApp ? (
                     <a
@@ -198,6 +224,31 @@ export function GerenciarRestaurantes({ initial }: { initial: Restaurante[] }) {
               <p className="text-xs text-gray-400 mt-1">
                 Se preenchido, o botão WhatsApp copiará a mensagem e abrirá o grupo automaticamente.
               </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Preço por refeição <span className="text-gray-400 text-xs">(opcional, R$)</span>
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: '☕ Café', key: 'precoCafeManha' as const },
+                  { label: '🍽️ Almoço', key: 'precoAlmoco' as const },
+                  { label: '🌙 Jantar', key: 'precoJantar' as const },
+                ].map(({ label, key }) => (
+                  <div key={key}>
+                    <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={form[key]}
+                      onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
             {erro && <p className="text-red-600 text-sm">{erro}</p>}
             <div className="flex gap-2">

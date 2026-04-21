@@ -28,6 +28,9 @@ model Restaurante {
   nome               String
   telefone           String  // somente dígitos, ex: 5565999998888
   linkGrupoWhatsApp  String? // link de convite do grupo, ex: https://chat.whatsapp.com/XXXXX
+  precoCafeManha     Float?
+  precoAlmoco        Float?
+  precoJantar        Float?
   ativo              Boolean @default(true)
   criadoEm           DateTime @default(now())
 

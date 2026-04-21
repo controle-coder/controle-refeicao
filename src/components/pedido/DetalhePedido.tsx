@@ -53,7 +53,7 @@ interface Pedido {
   versaoAtual: number
   criadoEm: Date | string
   dataRefeicao: Date | string
-  restaurante: { id: number; nome: string; telefone: string; linkGrupoWhatsApp?: string | null }
+  restaurante: { id: number; nome: string; telefone: string; linkGrupoWhatsApp?: string | null; precoCafeManha?: number | null; precoAlmoco?: number | null; precoJantar?: number | null }
   fazenda: { nome: string }
   turma: { nome: string }
   requisitante: { nome: string }
@@ -169,6 +169,11 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
       turma: pedido.turma.nome,
       requisitante: pedido.requisitante.nome,
       itens: versaoAtual.itens,
+      precos: {
+        CAFE_MANHA: pedido.restaurante.precoCafeManha,
+        ALMOCO: pedido.restaurante.precoAlmoco,
+        JANTAR: pedido.restaurante.precoJantar,
+      },
     })
 
     if (pedido.restaurante.linkGrupoWhatsApp) {

@@ -7,6 +7,9 @@ const schema = z.object({
   nome: z.string().min(1).optional(),
   telefone: z.string().min(10).regex(/^\d+$/).optional(),
   linkGrupoWhatsApp: z.string().optional().nullable(),
+  precoCafeManha: z.number().nonnegative().optional().nullable(),
+  precoAlmoco: z.number().nonnegative().optional().nullable(),
+  precoJantar: z.number().nonnegative().optional().nullable(),
   ativo: z.boolean().optional(),
 })
 
