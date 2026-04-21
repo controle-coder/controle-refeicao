@@ -7,8 +7,8 @@ interface Turma { id: number; nome: string; fazendaId: number; fazenda: Fazenda 
 interface Contrato { id: number; nome: string; numero: string | null }
 interface Requisitante {
   id: number; nome: string; login: string; role: string; ativo: boolean
-  fazendaId: number; turmaId: number; contratoId: number | null
-  fazenda: Fazenda; turma: Turma; contrato: Contrato | null
+  fazendaId: number | null; turmaId: number | null; contratoId: number | null
+  fazenda: Fazenda | null; turma: Turma | null; contrato: Contrato | null
 }
 
 export function GerenciarRequisitantes({
@@ -42,7 +42,7 @@ export function GerenciarRequisitantes({
     setEditando(item)
     setForm({
       nome: item.nome, login: item.login, pin: '', role: item.role,
-      fazendaId: item.fazendaId, turmaId: item.turmaId, contratoId: item.contratoId ?? 0,
+      fazendaId: item.fazendaId ?? 0, turmaId: item.turmaId ?? 0, contratoId: item.contratoId ?? 0,
     })
     setErro('')
     setModalAberto(true)
@@ -113,7 +113,7 @@ export function GerenciarRequisitantes({
               <tr key={item.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-800">{item.nome}</td>
                 <td className="px-4 py-3 text-gray-500">{item.login}</td>
-                <td className="px-4 py-3 text-gray-500">{item.fazenda.nome} / {item.turma.nome}</td>
+                <td className="px-4 py-3 text-gray-500">{item.fazenda?.nome ?? '—'} / {item.turma?.nome ?? '—'}</td>
                 <td className="px-4 py-3 text-gray-500">
                   {item.contrato ? (
                     <span className="inline-flex items-center gap-1">
