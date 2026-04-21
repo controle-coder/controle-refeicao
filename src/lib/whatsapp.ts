@@ -6,6 +6,12 @@ const LABELS_TIPO: Record<TipoRefeicao, string> = {
   JANTAR: 'Jantar',
 }
 
+const EMOJIS_TIPO: Record<TipoRefeicao, string> = {
+  CAFE_MANHA: '☕',
+  ALMOCO: '🍽️',
+  JANTAR: '🌙',
+}
+
 export interface ItemMensagem {
   tipoRefeicao: TipoRefeicao
   quantidade: number
@@ -32,8 +38,8 @@ export function gerarMensagemPedido(dados: DadosMensagem): string {
   const itensLinhas = dados.itens
     .filter((i) => i.quantidade > 0)
     .map((i) => {
-      let linha = `• ${LABELS_TIPO[i.tipoRefeicao]}: ${i.quantidade} refeição${i.quantidade !== 1 ? 'ões' : ''}`
-      if (i.observacao) linha += ` _(${i.observacao})_`
+      let linha = `${EMOJIS_TIPO[i.tipoRefeicao]} *${LABELS_TIPO[i.tipoRefeicao]}:* *${i.quantidade}* refeição${i.quantidade !== 1 ? 'ões' : ''}`
+      if (i.observacao) linha += `\n   _↳ ${i.observacao}_`
       return linha
     })
     .join('\n')
