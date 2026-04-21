@@ -162,8 +162,8 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas }: {
           p.requisitante.nome,
           TIPO_LABELS[i.tipoRefeicao] ?? i.tipoRefeicao,
           i.quantidade,
-          pr != null ? pr.toFixed(2) : '',
-          pr != null ? (pr * i.quantidade).toFixed(2) : '',
+          pr != null ? pr.toFixed(2).replace('.', ',') : '',
+          pr != null ? (pr * i.quantidade).toFixed(2).replace('.', ',') : '',
           STATUS_LABELS[p.status] ?? p.status,
         ].join(';')
       })
