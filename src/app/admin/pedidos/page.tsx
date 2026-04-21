@@ -14,7 +14,10 @@ export default async function AdminPedidosPage() {
       turma: true,
       requisitante: { select: { nome: true } },
       canceladoPor: { select: { nome: true } },
-      versoes: { orderBy: { numero: 'desc' }, take: 1, include: { itens: true } },
+      versoes: {
+        orderBy: { numero: 'asc' },
+        include: { itens: true, criadoPor: { select: { id: true, nome: true } } },
+      },
     },
   })
 
