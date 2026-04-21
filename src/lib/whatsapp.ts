@@ -26,7 +26,6 @@ export interface DadosMensagem {
   requisitante: string
   itens: ItemMensagem[]
   observacao?: string | null
-  precos?: { CAFE_MANHA?: number | null; ALMOCO?: number | null; JANTAR?: number | null } | null
 }
 
 export function gerarMensagemPedido(dados: DadosMensagem): string {
@@ -36,20 +35,10 @@ export function gerarMensagemPedido(dados: DadosMensagem): string {
     year: 'numeric',
   })
 
-  const itensFiltrados = dados.itens.filter((i) => i.quantidade > 0)
-
-  let totalGeral = 0
-  const itensLinhas = itensFiltrados
+  const itensLinhas = dados.itens
+    .filter((i) => i.quantidade > 0)
     .map((i) => {
-      const preco = dados.precos?.[i.tipoRefeicao]
-      const subtotal = preco != null ? preco * i.quantidade : null
-      if (subtotal != null) totalGeral += subtotal
-
       let linha = `${EMOJIS_TIPO[i.tipoRefeicao]} *${LABELS_TIPO[i.tipoRefeicao]}:* *${i.quantidade}* refeição${i.quantidade !== 1 ? 'ões' : ''}`
-      if (preco != null) {
-        linha += ` · R$ ${preco.toFixed(2).replace('.', ',')} cada`
-        linha += ` = *R$ ${subtotal!.toFixed(2).replace('.', ',')}*`
-      }
       if (i.observacao) linha += `\n   _↳ ${i.observacao}_`
       return linha
     })
@@ -62,10 +51,6 @@ export function gerarMensagemPedido(dados: DadosMensagem): string {
   mensagem += `👤 Requisitante: ${dados.requisitante}\n\n`
   mensagem += `*ITENS:*\n${itensLinhas}`
 
-  if (totalGeral > 0) {
-    mensagem += `\n*TOTAL: R$ ${totalGeral.toFixed(2).replace('.', ',')}*`
-  }
-
   if (dados.observacao) {
     mensagem += `\n\n*Observação:* ${dados.observacao}`
   }
@@ -76,7 +61,6 @@ export function gerarMensagemPedido(dados: DadosMensagem): string {
 }
 
 export function gerarLinkWhatsApp(telefone: string, mensagem: string): string {
-  // Garantir que telefone contenha apenas dígitos
   const tel = telefone.replace(/\D/g, '')
   return `https://wa.me/${tel}?text=${encodeURIComponent(mensagem)}`
 }
@@ -92,7 +76,6 @@ export async function enviarParaGrupo(linkGrupo: string, mensagem: string): Prom
     window.open(linkGrupo, '_blank')
     return true
   } catch {
-    // Fallback: abre o grupo mesmo sem copiar
     window.open(linkGrupo, '_blank')
     return false
   }

@@ -169,11 +169,6 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
       turma: pedido.turma.nome,
       requisitante: pedido.requisitante.nome,
       itens: versaoAtual.itens,
-      precos: {
-        CAFE_MANHA: pedido.restaurante.precoCafeManha,
-        ALMOCO: pedido.restaurante.precoAlmoco,
-        JANTAR: pedido.restaurante.precoJantar,
-      },
     })
 
     if (pedido.restaurante.linkGrupoWhatsApp) {

@@ -54,9 +54,19 @@ interface DiaSemana {
 }
 
 interface Props {
-  restaurante: { id: number; nome: string; linkGrupoWhatsApp?: string | null }
+  restaurante: { id: number; nome: string; linkGrupoWhatsApp?: string | null; precoCafeManha?: number | null; precoAlmoco?: number | null; precoJantar?: number | null }
   pedidosIniciais: Pedido[]
   nomeUsuario: string
+}
+
+const PRECO_KEY: Record<string, 'precoCafeManha' | 'precoAlmoco' | 'precoJantar'> = {
+  CAFE_MANHA: 'precoCafeManha',
+  ALMOCO: 'precoAlmoco',
+  JANTAR: 'precoJantar',
+}
+
+function formatarReal(valor: number): string {
+  return `R$ ${valor.toFixed(2).replace('.', ',')}`
 }
 
 function localDateStr(offsetDias = 0): string {
@@ -146,6 +156,18 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
 
   const confirmados = pedidos.filter((p) => p.status === 'CONFIRMADO').length
   const pendentes = pedidos.length - confirmados
+
+  // Valor total do dia (só se houver preços cadastrados)
+  const temPrecos = restaurante.precoCafeManha != null || restaurante.precoAlmoco != null || restaurante.precoJantar != null
+  let valorTotalDia = 0
+  if (temPrecos) {
+    pedidos.forEach((p) => {
+      p.versoes[0]?.itens.forEach((i) => {
+        const preco = restaurante[PRECO_KEY[i.tipoRefeicao]]
+        if (preco != null) valorTotalDia += preco * i.quantidade
+      })
+    })
+  }
 
   const pedidosFiltrados = pedidos.filter((p) => {
     if (tipoFiltro === 'TODOS') return true
@@ -293,8 +315,8 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
           ))}
         </div>
 
-        {/* Status de confirmação + botão imprimir */}
-        <div className="flex items-center gap-3 print:hidden">
+        {/* Status de confirmação + valor do dia + botão imprimir */}
+        <div className="flex items-center gap-3 print:hidden flex-wrap">
           {pedidos.length > 0 && (
             <>
               <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg text-sm">
@@ -305,6 +327,12 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
                 <span className="font-bold">{pendentes}</span>
                 <span className="text-xs">pendente{pendentes !== 1 ? 's' : ''}</span>
               </div>
+              {temPrecos && valorTotalDia > 0 && (
+                <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-sm">
+                  <span className="text-xs">Total:</span>
+                  <span className="font-bold">{formatarReal(valorTotalDia)}</span>
+                </div>
+              )}
             </>
           )}
           <button
@@ -340,6 +368,16 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
             const total = itens.reduce((s, i) => s + i.quantidade, 0)
             const isConfirmado = pedido.status === 'CONFIRMADO'
 
+            // Subtotal financeiro do pedido (todos os itens, não só os filtrados)
+            let subtotalPedido: number | null = null
+            if (temPrecos) {
+              subtotalPedido = 0
+              ;(pedido.versoes[0]?.itens ?? []).forEach((i) => {
+                const preco = restaurante[PRECO_KEY[i.tipoRefeicao]]
+                if (preco != null) subtotalPedido! += preco * i.quantidade
+              })
+            }
+
             return (
               <div
                 key={pedido.id}
@@ -359,6 +397,11 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
                     <span className="text-xs font-bold text-gray-700 bg-gray-100 rounded-full px-2 py-0.5">
                       {total} ref.
                     </span>
+                    {subtotalPedido != null && subtotalPedido > 0 && (
+                      <span className="text-xs font-semibold text-blue-700 bg-blue-50 rounded-full px-2 py-0.5">
+                        {formatarReal(subtotalPedido)}
+                      </span>
+                    )}
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full print:hidden ${STATUS_COLORS[pedido.status] ?? 'bg-gray-100 text-gray-600'}`}>
                       {STATUS_LABELS[pedido.status] ?? pedido.status}
                     </span>

@@ -12,7 +12,7 @@ export default async function RestaurantePage() {
 
   const restaurante = await prisma.restaurante.findUnique({
     where: { id: session.restauranteId },
-    select: { id: true, nome: true, linkGrupoWhatsApp: true },
+    select: { id: true, nome: true, linkGrupoWhatsApp: true, precoCafeManha: true, precoAlmoco: true, precoJantar: true },
   })
 
   if (!restaurante) redirect('/login')
