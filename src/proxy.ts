@@ -18,6 +18,7 @@ export async function proxy(request: NextRequest) {
   // Rotas públicas ou com autenticação própria
   if (
     pathname.startsWith('/pedidos') ||
+    pathname.startsWith('/pedido-visitante') ||
     pathname.startsWith('/api/pedidos') ||
     pathname.startsWith('/api/restaurantes') ||
     pathname.startsWith('/api/fazendas') ||

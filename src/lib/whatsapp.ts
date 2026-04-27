@@ -42,7 +42,7 @@ export function gerarMensagemPedido(dados: DadosMensagem): string {
       if (i.observacao) linha += `\n   _↳ ${i.observacao}_`
       return linha
     })
-    .join('\n')
+    .join('\n\n')
 
   let mensagem = `*PEDIDO DE REFEIÇÃO - V${dados.versao}*\n`
   mensagem += `📅 Data: ${dataFormatada}\n`

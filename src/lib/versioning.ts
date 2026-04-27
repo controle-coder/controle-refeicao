@@ -9,9 +9,11 @@ export interface ItemInput {
 
 export interface CriarPedidoInput {
   restauranteId: number
-  fazendaId: number
-  turmaId: number
-  requisitanteId: number
+  fazendaId?: number
+  turmaId?: number
+  requisitanteId?: number
+  nomeVisitante?: string
+  sobrenomeVisitante?: string
   dataRefeicao: Date
   itens: ItemInput[]
   observacao?: string
@@ -29,9 +31,11 @@ export async function criarPedido(input: CriarPedidoInput) {
     const pedido = await tx.pedido.create({
       data: {
         restauranteId: input.restauranteId,
-        fazendaId: input.fazendaId,
-        turmaId: input.turmaId,
-        requisitanteId: input.requisitanteId,
+        fazendaId: input.fazendaId ?? null,
+        turmaId: input.turmaId ?? null,
+        requisitanteId: input.requisitanteId ?? null,
+        nomeVisitante: input.nomeVisitante ?? null,
+        sobrenomeVisitante: input.sobrenomeVisitante ?? null,
         dataRefeicao: input.dataRefeicao,
         versaoAtual: 1,
         status: Status.ABERTO,
@@ -43,7 +47,7 @@ export async function criarPedido(input: CriarPedidoInput) {
         pedidoId: pedido.id,
         numero: 1,
         observacao: input.observacao,
-        criadoPorId: input.requisitanteId,
+        criadoPorId: input.requisitanteId ?? null,
         itens: {
           create: input.itens
             .filter((i) => i.quantidade > 0)

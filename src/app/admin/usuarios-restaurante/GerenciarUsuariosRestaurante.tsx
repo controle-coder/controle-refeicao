@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 interface Usuario {
   id: number
@@ -23,7 +22,6 @@ export function GerenciarUsuariosRestaurante({
   initial: Usuario[]
   restaurantes: Restaurante[]
 }) {
-  const router = useRouter()
   const [items, setItems] = useState(initial)
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<Usuario | null>(null)
@@ -78,8 +76,7 @@ export function GerenciarUsuariosRestaurante({
         const data = await res.json()
         setItems((prev) => [...prev, data])
       }
-      setModalAberto(false)
-      router.refresh()
+      window.location.href = '/admin/usuarios-restaurante'
     } catch {
       setErro('Erro de conexão')
     } finally {

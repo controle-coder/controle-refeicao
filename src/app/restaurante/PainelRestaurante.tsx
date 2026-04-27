@@ -40,9 +40,11 @@ interface Pedido {
   status: string
   dataRefeicao: string
   atualizadoEm: string
-  fazenda: { nome: string }
-  turma: { nome: string }
-  requisitante: { nome: string }
+  fazenda: { nome: string } | null
+  turma: { nome: string } | null
+  requisitante: { nome: string } | null
+  nomeVisitante?: string | null
+  sobrenomeVisitante?: string | null
   versoes: { itens: Item[] }[]
 }
 
@@ -72,7 +74,10 @@ function formatarReal(valor: number): string {
 function localDateStr(offsetDias = 0): string {
   const d = new Date()
   d.setDate(d.getDate() + offsetDias)
-  return d.toISOString().split('T')[0]
+  const ano = d.getFullYear()
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
 }
 
 function formatarData(iso: string): string {
@@ -396,9 +401,9 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
                 {/* Cabeçalho */}
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-semibold text-gray-800 text-sm">{pedido.fazenda.nome}</p>
+                    <p className="font-semibold text-gray-800 text-sm">{pedido.fazenda?.nome ?? '—'}</p>
                     <p className="text-xs text-gray-400">
-                      {pedido.turma.nome} · {pedido.requisitante.nome}
+                      {pedido.turma?.nome ?? '—'} · {pedido.requisitante?.nome ?? ([pedido.nomeVisitante, pedido.sobrenomeVisitante].filter(Boolean).join(' ') || 'Visitante')}
                       <span className="ml-1.5 text-gray-300">·</span>
                       <span className="ml-1.5">{formatarHora(pedido.atualizadoEm)}</span>
                     </p>
@@ -449,7 +454,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
                           </svg>
                           Confirmando...
                         </>
-                      ) : '✓ Confirmar Recebimento'}
+                      ) : '✓ Confirmar Entrega'}
                     </button>
                     {erroConfirmar === pedido.id && (
                       <p className="text-center text-xs text-red-600 mt-1.5">

@@ -7,8 +7,8 @@ interface Turma { id: number; nome: string; fazendaId: number; fazenda: Fazenda 
 interface Contrato { id: number; nome: string; numero: string | null }
 interface Requisitante {
   id: number; nome: string; login: string; role: string; ativo: boolean
-  fazendaId: number | null; turmaId: number | null; contratoId: number | null
-  fazenda: Fazenda | null; turma: Turma | null; contrato: Contrato | null
+  fazendaId: number | null; turmaId: number | null
+  fazenda: Fazenda | null; turma: Turma | null; contratos: Contrato[]
 }
 
 export function GerenciarRequisitantes({
@@ -24,16 +24,25 @@ export function GerenciarRequisitantes({
   const [editando, setEditando] = useState<Requisitante | null>(null)
   const [form, setForm] = useState({
     nome: '', login: '', pin: '', role: 'REQUISITANTE',
-    fazendaId: 0, turmaId: 0, contratoId: 0,
+    fazendaId: 0, turmaId: 0, contratoIds: [] as number[],
   })
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
 
   const turmasFiltradas = form.fazendaId ? turmas.filter((t) => t.fazendaId === form.fazendaId) : turmas
 
+  function toggleContrato(id: number) {
+    setForm((p) => ({
+      ...p,
+      contratoIds: p.contratoIds.includes(id)
+        ? p.contratoIds.filter((c) => c !== id)
+        : [...p.contratoIds, id],
+    }))
+  }
+
   function abrirNovo() {
     setEditando(null)
-    setForm({ nome: '', login: '', pin: '', role: 'REQUISITANTE', fazendaId: 0, turmaId: 0, contratoId: 0 })
+    setForm({ nome: '', login: '', pin: '', role: 'REQUISITANTE', fazendaId: 0, turmaId: 0, contratoIds: [] })
     setErro('')
     setModalAberto(true)
   }
@@ -42,7 +51,8 @@ export function GerenciarRequisitantes({
     setEditando(item)
     setForm({
       nome: item.nome, login: item.login, pin: '', role: item.role,
-      fazendaId: item.fazendaId ?? 0, turmaId: item.turmaId ?? 0, contratoId: item.contratoId ?? 0,
+      fazendaId: item.fazendaId ?? 0, turmaId: item.turmaId ?? 0,
+      contratoIds: item.contratos.map((c) => c.id),
     })
     setErro('')
     setModalAberto(true)
@@ -61,7 +71,7 @@ export function GerenciarRequisitantes({
         role: form.role,
         fazendaId: form.fazendaId,
         turmaId: form.turmaId,
-        contratoId: form.contratoId || null,
+        contratoIds: form.contratoIds,
       }
       if (form.pin) body.pin = form.pin
       const url = editando ? `/api/requisitantes/${editando.id}` : '/api/requisitantes'
@@ -102,7 +112,7 @@ export function GerenciarRequisitantes({
               <th className="px-4 py-3 text-left">Nome</th>
               <th className="px-4 py-3 text-left">Login</th>
               <th className="px-4 py-3 text-left">Fazenda / Turma</th>
-              <th className="px-4 py-3 text-left">Contrato</th>
+              <th className="px-4 py-3 text-left">Contratos</th>
               <th className="px-4 py-3 text-center">Papel</th>
               <th className="px-4 py-3 text-center">Status</th>
               <th className="px-4 py-3 text-right">Ações</th>
@@ -114,16 +124,17 @@ export function GerenciarRequisitantes({
                 <td className="px-4 py-3 font-medium text-gray-800">{item.nome}</td>
                 <td className="px-4 py-3 text-gray-500">{item.login}</td>
                 <td className="px-4 py-3 text-gray-500">{item.fazenda?.nome ?? '—'} / {item.turma?.nome ?? '—'}</td>
-                <td className="px-4 py-3 text-gray-500">
-                  {item.contrato ? (
-                    <span className="inline-flex items-center gap-1">
-                      <span>{item.contrato.nome}</span>
-                      {item.contrato.numero && (
-                        <span className="text-xs text-gray-400">({item.contrato.numero})</span>
-                      )}
-                    </span>
-                  ) : (
+                <td className="px-4 py-3">
+                  {item.contratos.length === 0 ? (
                     <span className="text-xs text-orange-500 font-medium">Sem contrato</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {item.contratos.map((c) => (
+                        <span key={c.id} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                          {c.nome}{c.numero ? ` (${c.numero})` : ''}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </td>
                 <td className="px-4 py-3 text-center">
@@ -151,7 +162,7 @@ export function GerenciarRequisitantes({
 
       {modalAberto && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-3">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-3 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold">{editando ? 'Editar Requisitante' : 'Novo Requisitante'}</h2>
             <input type="text" value={form.nome} onChange={(e) => setForm((p) => ({ ...p, nome: e.target.value }))}
               placeholder="Nome completo *"
@@ -178,15 +189,37 @@ export function GerenciarRequisitantes({
               <option value={0}>Selecione a turma... *</option>
               {turmasFiltradas.map((t) => <option key={t.id} value={t.id}>{t.nome} ({t.fazenda.nome})</option>)}
             </select>
-            <select value={form.contratoId} onChange={(e) => setForm((p) => ({ ...p, contratoId: Number(e.target.value) }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-              <option value={0}>Sem contrato</option>
-              {contratos.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}{c.numero ? ` (${c.numero})` : ''}
-                </option>
-              ))}
-            </select>
+
+            {/* Seleção múltipla de contratos */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1.5">Contratos</p>
+              {contratos.length === 0 ? (
+                <p className="text-xs text-gray-400">Nenhum contrato cadastrado</p>
+              ) : (
+                <div className="space-y-1.5 border border-gray-200 rounded-lg p-2 max-h-36 overflow-y-auto">
+                  {contratos.map((c) => {
+                    const marcado = form.contratoIds.includes(c.id)
+                    return (
+                      <label key={c.id} className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={marcado}
+                          onChange={() => toggleContrato(c.id)}
+                          className="accent-green-600 w-4 h-4"
+                        />
+                        <span className="text-sm text-gray-700">
+                          {c.nome}{c.numero ? <span className="text-gray-400 ml-1">({c.numero})</span> : null}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+              {form.contratoIds.length === 0 && (
+                <p className="text-xs text-orange-500 mt-1">Sem contrato — acesso a todos os restaurantes/fazendas/turmas</p>
+              )}
+            </div>
+
             {erro && <p className="text-red-600 text-sm">{erro}</p>}
             <div className="flex gap-2 pt-1">
               <button onClick={() => setModalAberto(false)} className="flex-1 border text-gray-700 py-2 rounded-lg hover:bg-gray-50">Cancelar</button>

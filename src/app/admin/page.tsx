@@ -130,9 +130,11 @@ export default async function AdminDashboard() {
                     </td>
                     <td className="px-4 py-2 text-gray-700">{p.restaurante.nome}</td>
                     <td className="px-4 py-2 text-gray-500">
-                      {p.fazenda.nome} / {p.turma.nome}
+                      {p.fazenda?.nome ?? '—'} / {p.turma?.nome ?? '—'}
                     </td>
-                    <td className="px-4 py-2 text-gray-500">{p.requisitante.nome}</td>
+                    <td className="px-4 py-2 text-gray-500">
+                      {p.requisitante?.nome ?? ([p.nomeVisitante, p.sobrenomeVisitante].filter(Boolean).join(' ') || 'Visitante')}
+                    </td>
                     <td className="px-4 py-2 text-right">{total}</td>
                     <td className="px-4 py-2">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[p.status]}`}>

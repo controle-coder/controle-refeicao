@@ -36,9 +36,11 @@ interface Pedido {
   dataRefeicao: string
   status: string
   restaurante: { nome: string; precoCafeManha?: number | null; precoAlmoco?: number | null; precoJantar?: number | null }
-  fazenda: { nome: string }
-  turma: { nome: string }
-  requisitante: { nome: string }
+  fazenda: { nome: string } | null
+  turma: { nome: string } | null
+  requisitante: { nome: string } | null
+  nomeVisitante?: string | null
+  sobrenomeVisitante?: string | null
   versoes: Versao[]
 }
 
@@ -157,9 +159,9 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas }: {
           p.id,
           fmtData(p.dataRefeicao),
           p.restaurante.nome,
-          p.fazenda.nome,
-          p.turma.nome,
-          p.requisitante.nome,
+          p.fazenda?.nome ?? '—',
+          p.turma?.nome ?? '—',
+          p.requisitante?.nome ?? ([p.nomeVisitante, p.sobrenomeVisitante].filter(Boolean).join(' ') || 'Visitante'),
           TIPO_LABELS[i.tipoRefeicao] ?? i.tipoRefeicao,
           i.quantidade,
           pr != null ? pr.toFixed(2).replace('.', ',') : '',
@@ -369,8 +371,10 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas }: {
                       <td className="px-4 py-3 text-gray-400 text-xs">#{p.id}</td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmtData(p.dataRefeicao)}</td>
                       <td className="px-4 py-3 text-gray-800 font-medium">{p.restaurante.nome}</td>
-                      <td className="px-4 py-3 text-gray-500">{p.fazenda.nome} · {p.turma.nome}</td>
-                      <td className="px-4 py-3 text-gray-500">{p.requisitante.nome}</td>
+                      <td className="px-4 py-3 text-gray-500">{p.fazenda?.nome ?? '—'} · {p.turma?.nome ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {p.requisitante?.nome ?? ([p.nomeVisitante, p.sobrenomeVisitante].filter(Boolean).join(' ') || 'Visitante')}
+                      </td>
                       <td className="px-4 py-3 text-center font-semibold text-gray-800">{isCancelado ? '—' : qtd}</td>
                       {temPrecos && (
                         <td className="px-4 py-3 text-right font-semibold text-blue-700">

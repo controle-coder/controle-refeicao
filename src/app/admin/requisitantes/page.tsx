@@ -5,7 +5,7 @@ export default async function RequisitantesPage() {
   const [requisitantes, fazendas, turmas, contratos] = await Promise.all([
     prisma.requisitante.findMany({
       orderBy: { nome: 'asc' },
-      include: { fazenda: true, turma: true, contrato: true },
+      include: { fazenda: true, turma: true, contratos: true },
     }),
     prisma.fazenda.findMany({ where: { ativo: true }, orderBy: { nome: 'asc' } }),
     prisma.turma.findMany({ where: { ativo: true }, include: { fazenda: true }, orderBy: { nome: 'asc' } }),

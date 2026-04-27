@@ -17,7 +17,7 @@ model Contrato {
   ativo     Boolean  @default(true)
   criadoEm  DateTime @default(now())
 
-  requisitantes Requisitante[]
+  requisitantes Requisitante[] // many-to-many
   fazendas      Fazenda[]
   restaurantes  Restaurante[]
   turmas        Turma[]
@@ -74,8 +74,7 @@ model Requisitante {
   fazenda       Fazenda?  @relation(fields: [fazendaId], references: [id])
   turmaId       Int?
   turma         Turma?    @relation(fields: [turmaId], references: [id])
-  contratoId    Int?
-  contrato      Contrato? @relation(fields: [contratoId], references: [id])
+  contratos     Contrato[] // many-to-many — substitui o antigo contratoId
   restauranteId Int?
   restaurante   Restaurante? @relation("UsuariosRestaurante", fields: [restauranteId], references: [id])
   ativo         Boolean  @default(true)
@@ -99,13 +98,16 @@ enum Role {
 model Pedido {
   id             Int    @id @default(autoincrement())
   restauranteId  Int
-  restaurante    Restaurante @relation(fields: [restauranteId], references: [id])
-  fazendaId      Int
-  fazenda        Fazenda     @relation(fields: [fazendaId], references: [id])
-  turmaId        Int
-  turma          Turma       @relation(fields: [turmaId], references: [id])
-  requisitanteId Int
-  requisitante   Requisitante @relation("PedidoRequisitante", fields: [requisitanteId], references: [id])
+  restaurante    Restaurante  @relation(fields: [restauranteId], references: [id])
+  fazendaId      Int?
+  fazenda        Fazenda?     @relation(fields: [fazendaId], references: [id])
+  turmaId        Int?
+  turma          Turma?       @relation(fields: [turmaId], references: [id])
+  requisitanteId Int?
+  requisitante   Requisitante? @relation("PedidoRequisitante", fields: [requisitanteId], references: [id])
+  // Campos para pedidos de visitantes (não cadastrados)
+  nomeVisitante      String?
+  sobrenomeVisitante String?
   versaoAtual    Int      @default(1)
   status         Status   @default(ABERTO)
   criadoEm       DateTime @default(now())
@@ -130,11 +132,11 @@ enum Status {
 model VersaoPedido {
   id          Int    @id @default(autoincrement())
   pedidoId    Int
-  pedido      Pedido       @relation(fields: [pedidoId], references: [id])
+  pedido      Pedido        @relation(fields: [pedidoId], references: [id])
   numero      Int
   observacao  String?
-  criadoPorId Int
-  criadoPor   Requisitante @relation(fields: [criadoPorId], references: [id])
+  criadoPorId Int?
+  criadoPor   Requisitante? @relation(fields: [criadoPorId], references: [id])
   criadoEm   DateTime @default(now())
 
   itens ItemRefeicao[]

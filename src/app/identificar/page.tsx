@@ -131,10 +131,20 @@ export default function IdentificarPage() {
               )}
             </button>
 
-            <div className="text-center">
-              <a href="/login" className="text-xs text-gray-400 hover:text-gray-600">
-                Admin? Entrar com senha →
-              </a>
+            <div className="border-t pt-3 space-y-2">
+              <div className="text-center">
+                <a
+                  href="/pedido-visitante"
+                  className="block w-full border border-gray-200 text-gray-600 text-sm py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Não estou na lista → Fazer pedido como visitante
+                </a>
+              </div>
+              <div className="text-center">
+                <a href="/login" className="text-xs text-gray-400 hover:text-gray-600">
+                  Admin? Entrar com senha →
+                </a>
+              </div>
             </div>
           </div>
         )}

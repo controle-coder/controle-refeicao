@@ -12,7 +12,7 @@ export default async function NovoPedidoPage() {
       include: {
         fazenda: true,
         turma: true,
-        contrato: {
+        contratos: {
           include: {
             fazendas: { select: { id: true } },
             restaurantes: { select: { id: true } },

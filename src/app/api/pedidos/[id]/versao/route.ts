@@ -28,29 +28,40 @@ export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos
     })
     if (!pedido) return Response.json({ error: 'Não encontrado' }, { status: 404 })
 
-    const tipos = pedido.versoes[0]?.itens.map((i) => i.tipoRefeicao) ?? []
     const agora = new Date()
     const ref = new Date(pedido.dataRefeicao)
     const ano = ref.getUTCFullYear()
     const mes = ref.getUTCMonth()
     const dia = ref.getUTCDate()
 
-    // Deadlines em UTC usando offset BRT (UTC-4):
-    // 19:30 UTC-4 = 23:30 UTC | 08:00 UTC-4 = 12:00 UTC | 16:00 UTC-4 = 20:00 UTC
-    if (tipos.includes('CAFE_MANHA') && agora >= new Date(Date.UTC(ano, mes, dia - 1, 23, 30))) {
-      return Response.json({ error: 'Prazo de edição do Café da Manhã encerrado às 19:30 do dia anterior' }, { status: 400 })
+    // Deadlines em UTC (AMT UTC-4: 19:30 = 23:30 UTC | 8:00 = 12:00 UTC | 16:00 = 20:00 UTC)
+    const deadlines: Record<string, Date> = {
+      CAFE_MANHA: new Date(Date.UTC(ano, mes, dia - 1, 23, 30)),
+      ALMOCO:     new Date(Date.UTC(ano, mes, dia, 12, 0)),
+      JANTAR:     new Date(Date.UTC(ano, mes, dia, 20, 0)),
     }
-    if (tipos.includes('ALMOCO') && agora >= new Date(Date.UTC(ano, mes, dia, 12, 0))) {
-      return Response.json({ error: 'Prazo de edição do Almoço encerrado às 8:00 do dia da retirada' }, { status: 400 })
+
+    const itensExistentes = pedido.versoes[0]?.itens ?? []
+    const algumEditavel = data.itens.some((item) => agora < (deadlines[item.tipoRefeicao] ?? new Date(0)))
+    if (!algumEditavel) {
+      return Response.json({ error: 'Prazo de edição encerrado para todas as refeições deste pedido' }, { status: 400 })
     }
-    if (tipos.includes('JANTAR') && agora >= new Date(Date.UTC(ano, mes, dia, 20, 0))) {
-      return Response.json({ error: 'Prazo de edição do Jantar encerrado às 16:00 do dia da retirada' }, { status: 400 })
-    }
+
+    // Para tipos com prazo encerrado, preserva quantidade e observação existentes
+    const itensMesclados = data.itens.map((item) => {
+      if (agora >= (deadlines[item.tipoRefeicao] ?? new Date(0))) {
+        const existente = itensExistentes.find((i) => i.tipoRefeicao === item.tipoRefeicao)
+        if (existente) {
+          return { tipoRefeicao: item.tipoRefeicao, quantidade: existente.quantidade, observacao: existente.observacao ?? undefined }
+        }
+      }
+      return item
+    })
 
     await criarNovaVersao({
       pedidoId: Number(id),
       usuarioId: data.usuarioId,
-      itens: data.itens,
+      itens: itensMesclados,
       observacao: data.observacao,
     })
 

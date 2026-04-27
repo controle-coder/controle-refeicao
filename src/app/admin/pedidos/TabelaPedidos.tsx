@@ -37,7 +37,7 @@ interface Versao {
   numero: number
   observacao?: string | null
   criadoEm: Date | string
-  criadoPor: { id: number; nome: string }
+  criadoPor: { id: number; nome: string } | null
   itens: Item[]
 }
 
@@ -48,12 +48,19 @@ interface Pedido {
   criadoEm: Date | string
   dataRefeicao?: Date | string
   restaurante: { nome: string }
-  fazenda: { nome: string }
-  turma: { nome: string }
-  requisitante: { nome: string }
+  fazenda: { nome: string } | null
+  turma: { nome: string } | null
+  requisitante: { nome: string } | null
+  nomeVisitante?: string | null
+  sobrenomeVisitante?: string | null
   canceladoPor?: { nome: string } | null
   motivoCancelamento?: string | null
   versoes: Versao[]
+}
+
+function nomeRequisitantePedido(p: Pedido): string {
+  if (p.requisitante) return p.requisitante.nome
+  return [p.nomeVisitante, p.sobrenomeVisitante].filter(Boolean).join(' ') || 'Visitante'
 }
 
 interface Props {
@@ -207,8 +214,8 @@ export function TabelaPedidos({ pedidos, adminId, adminNome }: Props) {
                   {new Date(p.criadoEm).toLocaleDateString('pt-BR')}
                 </td>
                 <td className="px-4 py-2 text-gray-800">{p.restaurante.nome}</td>
-                <td className="px-4 py-2 text-gray-500">{p.fazenda.nome} / {p.turma.nome}</td>
-                <td className="px-4 py-2 text-gray-500">{p.requisitante.nome}</td>
+                <td className="px-4 py-2 text-gray-500">{p.fazenda?.nome ?? '—'} / {p.turma?.nome ?? '—'}</td>
+                <td className="px-4 py-2 text-gray-500">{nomeRequisitantePedido(p)}</td>
                 <td className="px-4 py-2 text-right text-gray-800">{totalItens}</td>
                 <td className="px-4 py-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[p.status]}`}>
@@ -249,11 +256,11 @@ export function TabelaPedidos({ pedidos, adminId, adminNome }: Props) {
               <span className="text-gray-500">Restaurante</span>
               <span className="font-medium text-gray-800">{selecionado.restaurante.nome}</span>
               <span className="text-gray-500">Fazenda</span>
-              <span className="font-medium text-gray-800">{selecionado.fazenda.nome}</span>
+              <span className="font-medium text-gray-800">{selecionado.fazenda?.nome ?? '—'}</span>
               <span className="text-gray-500">Turma</span>
-              <span className="font-medium text-gray-800">{selecionado.turma.nome}</span>
+              <span className="font-medium text-gray-800">{selecionado.turma?.nome ?? '—'}</span>
               <span className="text-gray-500">Requisitante</span>
-              <span className="font-medium text-gray-800">{selecionado.requisitante.nome}</span>
+              <span className="font-medium text-gray-800">{nomeRequisitantePedido(selecionado)}</span>
             </div>
 
             {/* Refeições da versão atual */}
@@ -325,7 +332,7 @@ export function TabelaPedidos({ pedidos, adminId, adminNome }: Props) {
                             </span>
                           </div>
                           <p className="text-gray-600">
-                            Por: <span className="font-medium">{v.criadoPor.nome}</span>
+                            Por: <span className="font-medium">{v.criadoPor?.nome ?? 'Visitante'}</span>
                           </p>
                           <div className="flex gap-3 flex-wrap">
                             {v.itens.map((i) => (

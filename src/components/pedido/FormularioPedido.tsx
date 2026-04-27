@@ -74,7 +74,7 @@ interface Requisitante {
   id: number; nome: string
   fazendaId: number; fazenda: { nome: string }
   turmaId: number; turma: { nome: string }
-  contrato: ContratoVinculos | null
+  contratos: ContratoVinculos[]
 }
 interface PedidoResumo {
   id: number
@@ -138,18 +138,19 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
   }, [])
 
   const requisitante = requisitantes.find((r) => r.id === requisitanteId)
-  const contrato = requisitante?.contrato ?? null
+  const contratos = requisitante?.contratos ?? []
 
-  // Filtra por contrato se o requisitante tiver um; senão mostra todos ativos
-  const restaurantesFiltrados = contrato
-    ? restaurantes.filter((r) => contrato.restaurantes.some((cr) => cr.id === r.id))
+  // Filtra pela união de vínculos de todos os contratos do requisitante;
+  // se não tiver contratos, mostra tudo.
+  const restaurantesFiltrados = contratos.length > 0
+    ? restaurantes.filter((r) => contratos.some((c) => c.restaurantes.some((cr) => cr.id === r.id)))
     : restaurantes
-  const fazendasFiltradas = contrato
-    ? fazendas.filter((f) => contrato.fazendas.some((cf) => cf.id === f.id))
+  const fazendasFiltradas = contratos.length > 0
+    ? fazendas.filter((f) => contratos.some((c) => c.fazendas.some((cf) => cf.id === f.id)))
     : fazendas
   const turmasFiltradas = (() => {
-    let lista = contrato
-      ? turmas.filter((t) => contrato.turmas.some((ct) => ct.id === t.id))
+    let lista = contratos.length > 0
+      ? turmas.filter((t) => contratos.some((c) => c.turmas.some((ct) => ct.id === t.id)))
       : turmas
     if (fazendaId) lista = lista.filter((t) => t.fazendaId === fazendaId)
     return lista
@@ -263,6 +264,15 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
             {requisitantes.length === 0 && (
               <p className="text-center text-gray-400 py-8">Nenhum requisitante cadastrado</p>
             )}
+
+            <div className="border-t pt-3">
+              <a
+                href="/pedido-visitante"
+                className="block w-full text-center border border-gray-200 text-gray-500 text-sm py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Não estou na lista → Pedido como visitante
+              </a>
+            </div>
           </div>
         )}
 

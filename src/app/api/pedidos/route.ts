@@ -11,14 +11,24 @@ const itemSchema = z.object({
 })
 
 const schema = z.object({
-  requisitanteId: z.number().int().positive(),
+  // Usuário cadastrado
+  requisitanteId: z.number().int().positive().optional(),
+  fazendaId: z.number().int().positive().optional(),
+  turmaId: z.number().int().positive().optional(),
+  // Visitante (não cadastrado)
+  nomeVisitante: z.string().min(1).optional(),
+  sobrenomeVisitante: z.string().min(1).optional(),
+  // Campos comuns
   restauranteId: z.number().int().positive(),
-  fazendaId: z.number().int().positive(),
-  turmaId: z.number().int().positive(),
   dataRefeicao: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida'),
   itens: z.array(itemSchema).min(1),
   observacao: z.string().optional(),
-})
+}).refine(
+  (d) =>
+    (d.requisitanteId && d.fazendaId && d.turmaId) ||
+    (d.nomeVisitante && d.sobrenomeVisitante),
+  { message: 'Informe requisitanteId+fazendaId+turmaId ou nomeVisitante+sobrenomeVisitante' }
+)
 
 export async function GET(request: NextRequest) {
   try {
@@ -68,6 +78,8 @@ export async function POST(request: NextRequest) {
       fazendaId: data.fazendaId,
       turmaId: data.turmaId,
       requisitanteId: data.requisitanteId,
+      nomeVisitante: data.nomeVisitante,
+      sobrenomeVisitante: data.sobrenomeVisitante,
       dataRefeicao: new Date(data.dataRefeicao + 'T12:00:00.000Z'),
       itens: data.itens,
       observacao: data.observacao,

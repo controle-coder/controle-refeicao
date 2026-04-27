@@ -30,7 +30,7 @@ export default async function DetalhePedidoPage({
 
   return (
     <div className="mt-2">
-      <DetalhePedido pedido={pedido as any} sessaoId={pedido.requisitanteId} sessaoRole="REQUISITANTE" />
+      <DetalhePedido pedido={pedido as any} sessaoId={pedido.requisitanteId ?? null} sessaoRole="REQUISITANTE" />
     </div>
   )
 }

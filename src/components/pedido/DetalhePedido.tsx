@@ -43,7 +43,7 @@ interface VersaoPedido {
   numero: number
   observacao?: string | null
   criadoEm: Date | string
-  criadoPor: { id: number; nome: string }
+  criadoPor: { id: number; nome: string } | null
   itens: Item[]
 }
 
@@ -54,16 +54,23 @@ interface Pedido {
   criadoEm: Date | string
   dataRefeicao: Date | string
   restaurante: { id: number; nome: string; telefone: string; linkGrupoWhatsApp?: string | null; precoCafeManha?: number | null; precoAlmoco?: number | null; precoJantar?: number | null }
-  fazenda: { nome: string }
-  turma: { nome: string }
-  requisitante: { nome: string }
+  fazenda: { nome: string } | null
+  turma: { nome: string } | null
+  requisitante: { nome: string } | null
+  nomeVisitante?: string | null
+  sobrenomeVisitante?: string | null
   versoes: VersaoPedido[]
 }
 
 interface Props {
   pedido: Pedido
-  sessaoId: number
+  sessaoId: number | null
   sessaoRole: string
+}
+
+function nomeAutor(pedido: Pedido): string {
+  if (pedido.requisitante) return pedido.requisitante.nome
+  return [pedido.nomeVisitante, pedido.sobrenomeVisitante].filter(Boolean).join(' ') || 'Visitante'
 }
 
 export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
@@ -78,25 +85,25 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
 
   const versaoAtual = pedido.versoes.find((v) => v.numero === pedido.versaoAtual)
 
-  function podeEditarAgora(): boolean {
-    if (pedido.status === 'CANCELADO') return false
-    const tipos = versaoAtual?.itens.map((i) => i.tipoRefeicao) ?? []
-
+  function tipoExpirado(tipo: string): boolean {
     const agora = new Date()
     const ref = new Date(pedido.dataRefeicao)
     const ano = ref.getUTCFullYear()
     const mes = ref.getUTCMonth()
     const dia = ref.getUTCDate()
-
-    for (const tipo of tipos) {
-      if (tipo === 'CAFE_MANHA' && agora >= new Date(ano, mes, dia - 1, 19, 30)) return false
-      if (tipo === 'ALMOCO'     && agora >= new Date(ano, mes, dia, 8, 0))        return false
-      if (tipo === 'JANTAR'     && agora >= new Date(ano, mes, dia, 16, 0))       return false
-    }
-    return true
+    if (tipo === 'CAFE_MANHA') return agora >= new Date(ano, mes, dia - 1, 19, 30)
+    if (tipo === 'ALMOCO')     return agora >= new Date(ano, mes, dia, 8, 0)
+    if (tipo === 'JANTAR')     return agora >= new Date(ano, mes, dia, 16, 0)
+    return false
   }
 
-  const dentroDosPrazo = podeEditarAgora()
+  function algumTipoEditavel(): boolean {
+    if (pedido.status === 'CANCELADO') return false
+    const tipos = versaoAtual?.itens.map((i) => i.tipoRefeicao) ?? []
+    return tipos.some((t) => !tipoExpirado(t))
+  }
+
+  const dentroDosPrazo = algumTipoEditavel()
   function iniciarEdicao() {
     if (!versaoAtual) return
     const qtds: Record<string, number> = {}
@@ -165,9 +172,9 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
     const mensagem = gerarMensagemPedido({
       versao: pedido.versaoAtual,
       data: new Date(pedido.dataRefeicao),
-      fazenda: pedido.fazenda.nome,
-      turma: pedido.turma.nome,
-      requisitante: pedido.requisitante.nome,
+      fazenda: pedido.fazenda?.nome ?? '—',
+      turma: pedido.turma?.nome ?? '—',
+      requisitante: nomeAutor(pedido),
       itens: versaoAtual.itens,
     })
 
@@ -211,12 +218,20 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
           </div>
           <div className="text-gray-500">Restaurante</div>
           <div className="font-medium text-gray-800">{pedido.restaurante.nome}</div>
-          <div className="text-gray-500">Fazenda</div>
-          <div className="font-medium text-gray-800">{pedido.fazenda.nome}</div>
-          <div className="text-gray-500">Turma</div>
-          <div className="font-medium text-gray-800">{pedido.turma.nome}</div>
+          {pedido.fazenda && (
+            <>
+              <div className="text-gray-500">Fazenda</div>
+              <div className="font-medium text-gray-800">{pedido.fazenda.nome}</div>
+            </>
+          )}
+          {pedido.turma && (
+            <>
+              <div className="text-gray-500">Turma</div>
+              <div className="font-medium text-gray-800">{pedido.turma.nome}</div>
+            </>
+          )}
           <div className="text-gray-500">Requisitante</div>
-          <div className="font-medium text-gray-800">{pedido.requisitante.nome}</div>
+          <div className="font-medium text-gray-800">{nomeAutor(pedido)}</div>
           <div className="text-gray-500">Versão</div>
           <div className="font-medium text-gray-800">V{pedido.versaoAtual}</div>
         </div>
@@ -253,7 +268,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
                   </svg>
                   Enviar para Restaurante
                 </button>
-                {dentroDosPrazo ? (
+                {dentroDosPrazo && sessaoId ? (
                   <button
                     onClick={iniciarEdicao}
                     className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 text-sm"
@@ -285,41 +300,51 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
         {editando && (
           <div className="border-t pt-3 space-y-4">
             <p className="text-sm font-medium text-gray-700">Nova Versão (V{pedido.versaoAtual + 1})</p>
-            {TIPOS_REFEICAO.map((tipo) => (
+            {TIPOS_REFEICAO.map((tipo) => {
+              const expirado = tipoExpirado(tipo.valor)
+              return (
               <div key={tipo.valor} className="py-2 border-b last:border-0 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-700 text-sm font-medium">{tipo.label}</span>
+                  <div>
+                    <span className={`text-sm font-medium ${expirado ? 'text-gray-400' : 'text-gray-700'}`}>{tipo.label}</span>
+                    {expirado && <span className="ml-2 text-[10px] text-gray-400">prazo encerrado</span>}
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() =>
                         setQuantidades((p) => ({ ...p, [tipo.valor]: Math.max(0, (p[tipo.valor] ?? 0) - 1) }))
                       }
-                      className="w-7 h-7 rounded-full border text-gray-600 hover:bg-gray-100 font-bold text-sm"
+                      disabled={expirado}
+                      className="w-7 h-7 rounded-full border text-gray-600 hover:bg-gray-100 font-bold text-sm disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       −
                     </button>
-                    <span className="w-6 text-center font-semibold text-sm">
+                    <span className={`w-6 text-center font-semibold text-sm ${expirado ? 'text-gray-400' : ''}`}>
                       {quantidades[tipo.valor] ?? 0}
                     </span>
                     <button
                       onClick={() =>
                         setQuantidades((p) => ({ ...p, [tipo.valor]: (p[tipo.valor] ?? 0) + 1 }))
                       }
-                      className="w-7 h-7 rounded-full border text-gray-600 hover:bg-gray-100 font-bold text-sm"
+                      disabled={expirado}
+                      className="w-7 h-7 rounded-full border text-gray-600 hover:bg-gray-100 font-bold text-sm disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       +
                     </button>
                   </div>
                 </div>
-                <input
-                  type="text"
-                  value={observacoes[tipo.valor] ?? ''}
-                  onChange={(e) => setObservacoes((p) => ({ ...p, [tipo.valor]: e.target.value }))}
-                  placeholder={`Obs. ${tipo.label} (opcional)`}
-                  className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-600 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-green-400"
-                />
+                {!expirado && (
+                  <input
+                    type="text"
+                    value={observacoes[tipo.valor] ?? ''}
+                    onChange={(e) => setObservacoes((p) => ({ ...p, [tipo.valor]: e.target.value }))}
+                    placeholder={`Obs. ${tipo.label} (opcional)`}
+                    className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-600 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-green-400"
+                  />
+                )}
               </div>
-            ))}
+              )
+            })}
             {erro && <p className="text-red-600 text-sm">{erro}</p>}
             <div className="flex gap-2">
               <button
@@ -401,7 +426,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
                   )}
                 </span>
                 <div className="text-xs text-gray-400">
-                  {new Date(versao.criadoEm).toLocaleString('pt-BR')} · {versao.criadoPor.nome}
+                  {new Date(versao.criadoEm).toLocaleString('pt-BR')} · {versao.criadoPor?.nome ?? 'Visitante'}
                 </div>
               </div>
               <div className="space-y-1">
