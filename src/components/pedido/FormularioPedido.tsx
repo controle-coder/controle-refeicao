@@ -114,6 +114,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
   // Etapa 4: refeições
   const [quantidades, setQuantidades] = useState<Record<string, number>>({})
   const [observacoes, setObservacoes] = useState<Record<string, string>>({})
+  const [observacaoGeral, setObservacaoGeral] = useState('')
   const [dataRefeicao, setDataRefeicao] = useState(() => localDateStr(1))
 
   const [erro, setErro] = useState('')
@@ -130,6 +131,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
         setPedidosHistorico([])
         setQuantidades({})
         setObservacoes({})
+        setObservacaoGeral('')
         setDataRefeicao(localDateStr(1))
       }
     }
@@ -210,6 +212,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
           turmaId,
           dataRefeicao,
           itens,
+          observacao: observacaoGeral.trim() || undefined,
         }),
       })
       const data = await res.json()
@@ -480,6 +483,19 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                 />
               </div>
             ))}
+
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Observação geral
+              </label>
+              <textarea
+                value={observacaoGeral}
+                onChange={(e) => setObservacaoGeral(e.target.value)}
+                placeholder="Alguma observação sobre o pedido como um todo? (opcional)"
+                rows={2}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 resize-none"
+              />
+            </div>
 
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">
