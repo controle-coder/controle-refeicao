@@ -478,7 +478,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                   type="text"
                   value={observacoes[tipo.valor] ?? ''}
                   onChange={(e) => setObservacoes((p) => ({ ...p, [tipo.valor]: e.target.value }))}
-                  placeholder={`Obs. ${tipo.label} (opcional)`}
+                  placeholder={`Nomes dos colaboradores do ${tipo.label} (opcional)`}
                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-600 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-green-400"
                 />
               </div>
