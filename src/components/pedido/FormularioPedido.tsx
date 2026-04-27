@@ -456,9 +456,13 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                     >
                       −
                     </button>
-                    <span className="w-8 text-center font-bold text-gray-800 text-lg">
-                      {quantidades[tipo.valor] ?? 0}
-                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={quantidades[tipo.valor] ?? 0}
+                      onChange={(e) => handleQuantidade(tipo.valor, parseInt(e.target.value) || 0)}
+                      className="w-12 text-center font-bold text-gray-800 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+                    />
                     <button
                       onClick={() => handleQuantidade(tipo.valor, (quantidades[tipo.valor] ?? 0) + 1)}
                       className="w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 font-bold text-lg leading-none"
