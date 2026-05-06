@@ -26,10 +26,18 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 interface Restaurante { id: number; nome: string }
-interface Fazenda { id: number; nome: string }
-interface Turma { id: number; nome: string; fazenda: { nome: string } }
+interface Fazenda { id: number; nome: string; turmas: { id: number }[] }
+interface Turma { id: number; nome: string; fazendaId: number; fazenda: { nome: string } }
+interface Contrato {
+  id: number; nome: string; numero?: string | null
+  fazendas:      { id: number }[]
+  turmas:        { id: number }[]
+  restaurantes:  { id: number }[]
+  requisitantes: { id: number }[]
+}
+interface Requisitante { id: number; nome: string; fazendaId?: number | null; turmaId?: number | null }
 
-interface ItemRefeicao { tipoRefeicao: string; quantidade: number }
+interface ItemRefeicao { tipoRefeicao: string; quantidade: number; observacao?: string | null }
 interface Versao { itens: ItemRefeicao[] }
 interface Pedido {
   id: number
@@ -72,27 +80,92 @@ function fmtDataCurta(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit' })
 }
 
-export function RelatorioCliente({ restaurantes, fazendas, turmas }: {
+export function RelatorioCliente({ restaurantes, fazendas, turmas, contratos, requisitantes }: {
   restaurantes: Restaurante[]
   fazendas: Fazenda[]
   turmas: Turma[]
+  contratos: Contrato[]
+  requisitantes: Requisitante[]
 }) {
-  const [tipo, setTipo] = useState('restaurante')
-  const [filtroId, setFiltroId] = useState<number>(0)
+  const [filtroContratoId,    setFiltroContratoId]    = useState<number>(0)
+  const [filtroFazendaId,     setFiltroFazendaId]     = useState<number>(0)
+  const [filtroTurmaId,       setFiltroTurmaId]       = useState<number>(0)
+  const [filtroSolicitanteId, setFiltroSolicitanteId] = useState<number>(0)
+  const [filtroRestauranteId, setFiltroRestauranteId] = useState<number>(0)
   const [de, setDe] = useState('')
   const [ate, setAte] = useState('')
   const [dados, setDados] = useState<Pedido[]>([])
   const [carregando, setCarregando] = useState(false)
   const [modo, setModo] = useState<Modo>('refeicoes')
 
+  // ── Cascade: opções disponíveis conforme seleções superiores ──────────────
+  // Ordem: Contrato → Restaurante → Solicitante → Fazenda → Turma
+
+  const contratoSel    = contratos.find(c => c.id === filtroContratoId) ?? null
+  const solicitanteSel = requisitantes.find(r => r.id === filtroSolicitanteId) ?? null
+
+  const restaurantesOpcoes = contratoSel
+    ? restaurantes.filter(r => contratoSel.restaurantes.some(cr => cr.id === r.id))
+    : restaurantes
+
+  const solicitantesOpcoes = contratoSel
+    ? requisitantes.filter(s => contratoSel.requisitantes.some(cr => cr.id === s.id))
+    : requisitantes
+
+  const fazendasOpcoes = (() => {
+    let r = fazendas
+    if (contratoSel)    r = r.filter(f => contratoSel.fazendas.some(cf => cf.id === f.id))
+    if (solicitanteSel?.fazendaId) r = r.filter(f => f.id === solicitanteSel.fazendaId)
+    return r
+  })()
+
+  const turmasOpcoes = (() => {
+    let r = turmas
+    if (contratoSel)               r = r.filter(t => contratoSel.turmas.some(ct => ct.id === t.id))
+    if (solicitanteSel?.turmaId)   r = r.filter(t => t.id === solicitanteSel.turmaId)
+    if (filtroFazendaId)           r = r.filter(t => t.fazendaId === filtroFazendaId)
+    return r
+  })()
+
+  // ── Handlers com reset em cascata ─────────────────────────────────────────
+
+  function handleContratoChange(id: number) {
+    setFiltroContratoId(id)
+    setFiltroRestauranteId(0)
+    setFiltroSolicitanteId(0)
+    setFiltroFazendaId(0)
+    setFiltroTurmaId(0)
+  }
+
+  function handleSolicitanteChange(id: number) {
+    setFiltroSolicitanteId(id)
+    setFiltroFazendaId(0)
+    setFiltroTurmaId(0)
+  }
+
+  function handleFazendaChange(id: number) {
+    setFiltroFazendaId(id)
+    setFiltroTurmaId(0)
+  }
+
+  function handleTurmaChange(id: number) {
+    setFiltroTurmaId(id)
+  }
+
+  // ── Buscar ────────────────────────────────────────────────────────────────
+
   async function buscar() {
     setCarregando(true)
     try {
       const params = new URLSearchParams()
-      if (filtroId) params.set(`${tipo}Id`, String(filtroId))
-      if (de) params.set('de', de)
+      if (filtroContratoId)    params.set('contratoId',     String(filtroContratoId))
+      if (filtroFazendaId)     params.set('fazendaId',      String(filtroFazendaId))
+      if (filtroTurmaId)       params.set('turmaId',        String(filtroTurmaId))
+      if (filtroSolicitanteId) params.set('requisitanteId', String(filtroSolicitanteId))
+      if (filtroRestauranteId) params.set('restauranteId',  String(filtroRestauranteId))
+      if (de)  params.set('de',  de)
       if (ate) params.set('ate', ate)
-      const res = await fetch(`/api/relatorios/${tipo}?${params}`)
+      const res = await fetch(`/api/relatorios/fazenda?${params}`)
       setDados(await res.json())
     } catch {
       setDados([])
@@ -101,21 +174,18 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas }: {
     }
   }
 
-  const opcoes =
-    tipo === 'restaurante' ? restaurantes :
-    tipo === 'fazenda' ? fazendas :
-    turmas.map((t) => ({ id: t.id, nome: `${t.nome} (${t.fazenda.nome})` }))
+  // ── Métricas ──────────────────────────────────────────────────────────────
 
-  // Métricas
-  const ativos = dados.filter((p) => p.status !== 'CANCELADO')
-  const totalPedidos = dados.length
+  const ativos        = dados.filter((p) => p.status !== 'CANCELADO')
+  const totalPedidos  = dados.length
   const totalRefeicoes = ativos.reduce((s, p) => s + (p.versoes[0]?.itens.reduce((ss, i) => ss + i.quantidade, 0) ?? 0), 0)
-  const totalValor = ativos.reduce((s, p) => s + calcularValor(p), 0)
-  const confirmados = dados.filter((p) => p.status === 'CONFIRMADO').length
-  const taxaConf = totalPedidos > 0 ? Math.round((confirmados / totalPedidos) * 100) : 0
-  const temPrecos = ativos.some((p) => calcularValor(p) > 0)
+  const totalValor    = ativos.reduce((s, p) => s + calcularValor(p), 0)
+  const confirmados   = dados.filter((p) => p.status === 'CONFIRMADO').length
+  const taxaConf      = totalPedidos > 0 ? Math.round((confirmados / totalPedidos) * 100) : 0
+  const temPrecos     = ativos.some((p) => calcularValor(p) > 0)
 
-  // Gráfico por tipo
+  // ── Gráfico por tipo ──────────────────────────────────────────────────────
+
   const porTipo: Record<string, { qtd: number; valor: number }> = {}
   ativos.forEach((p) => {
     p.versoes[0]?.itens.forEach((i) => {
@@ -131,7 +201,8 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas }: {
     Valor: parseFloat(v.valor.toFixed(2)),
   }))
 
-  // Gráfico por dia
+  // ── Gráfico por dia ───────────────────────────────────────────────────────
+
   const porDia: Record<string, { qtd: number; valor: number }> = {}
   ativos.forEach((p) => {
     const dia = p.dataRefeicao.split('T')[0]
@@ -150,8 +221,10 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas }: {
       Valor: parseFloat(v.valor.toFixed(2)),
     }))
 
+  // ── CSV ───────────────────────────────────────────────────────────────────
+
   function exportarCSV() {
-    const cabecalho = ['#', 'Data Refeição', 'Restaurante', 'Fazenda', 'Turma', 'Requisitante', 'Tipo', 'Qtd', 'Preço Unit.', 'Subtotal', 'Status'].join(';')
+    const cabecalho = ['#', 'Data Refeição', 'Restaurante', 'Fazenda', 'Turma', 'Requisitante', 'Tipo', 'Qtd', 'Preço Unit.', 'Subtotal', 'Status', 'Colaboradores'].join(';')
     const linhas = dados.flatMap((p) =>
       (p.versoes[0]?.itens ?? []).map((i) => {
         const pr = precoDoItem(p, i.tipoRefeicao)
@@ -167,6 +240,7 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas }: {
           pr != null ? pr.toFixed(2).replace('.', ',') : '',
           pr != null ? (pr * i.quantidade).toFixed(2).replace('.', ',') : '',
           STATUS_LABELS[p.status] ?? p.status,
+          i.observacao ?? '',
         ].join(';')
       })
     )
@@ -174,58 +248,114 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas }: {
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `relatorio-${tipo}-${new Date().toISOString().slice(0, 10)}.csv`
+    a.download = `relatorio-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
   }
 
   const dataKey = modo === 'refeicoes' ? 'Quantidade' : 'Valor'
-  const cor = modo === 'refeicoes' ? '#16a34a' : '#2563eb'
+  const cor     = modo === 'refeicoes' ? '#16a34a' : '#2563eb'
+
+  // ── Select helper ─────────────────────────────────────────────────────────
+
+  const selectCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-50 disabled:text-gray-400'
+  const labelCls  = 'block text-xs font-medium text-gray-500 mb-1.5'
 
   return (
     <div className="space-y-5">
 
       {/* Filtros */}
       <div className="bg-white rounded-xl shadow-sm border p-5 space-y-4">
+
+        {/* Linha 1: Contrato → Restaurante → Solicitante → Fazenda → Turma */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Agrupar por</label>
+            <label className={labelCls}>Contrato</label>
             <select
-              value={tipo}
-              onChange={(e) => { setTipo(e.target.value); setFiltroId(0) }}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="restaurante">Restaurante</option>
-              <option value="fazenda">Fazenda</option>
-              <option value="turma">Turma</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Filtrar</label>
-            <select
-              value={filtroId}
-              onChange={(e) => setFiltroId(Number(e.target.value))}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              value={filtroContratoId}
+              onChange={(e) => handleContratoChange(Number(e.target.value))}
+              className={selectCls}
             >
               <option value={0}>Todos</option>
-              {opcoes.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
+              {contratos.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.numero ? `${c.numero} – ${c.nome}` : c.nome}
+                </option>
+              ))}
             </select>
           </div>
+
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Data início</label>
+            <label className={labelCls}>Restaurante</label>
+            <select
+              value={filtroRestauranteId}
+              onChange={(e) => setFiltroRestauranteId(Number(e.target.value))}
+              className={selectCls}
+            >
+              <option value={0}>Todos</option>
+              {restaurantesOpcoes.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className={labelCls}>Solicitante</label>
+            <select
+              value={filtroSolicitanteId}
+              onChange={(e) => handleSolicitanteChange(Number(e.target.value))}
+              className={selectCls}
+            >
+              <option value={0}>Todos</option>
+              {solicitantesOpcoes.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className={labelCls}>Fazenda</label>
+            <select
+              value={filtroFazendaId}
+              onChange={(e) => handleFazendaChange(Number(e.target.value))}
+              disabled={fazendasOpcoes.length === 0}
+              className={selectCls}
+            >
+              <option value={0}>Todas</option>
+              {fazendasOpcoes.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Linha 2: Turma + Datas */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div>
+            <label className={labelCls}>Turma</label>
+            <select
+              value={filtroTurmaId}
+              onChange={(e) => handleTurmaChange(Number(e.target.value))}
+              disabled={turmasOpcoes.length === 0}
+              className={selectCls}
+            >
+              <option value={0}>Todas</option>
+              {turmasOpcoes.map((t) => (
+                <option key={t.id} value={t.id}>{t.nome} ({t.fazenda.nome})</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className={labelCls}>Data início</label>
             <input
               type="date"
               value={de}
               onChange={(e) => setDe(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className={selectCls}
             />
           </div>
+
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Data fim</label>
+            <label className={labelCls}>Data fim</label>
             <input
               type="date"
               value={ate}
               onChange={(e) => setAte(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className={selectCls}
             />
           </div>
         </div>

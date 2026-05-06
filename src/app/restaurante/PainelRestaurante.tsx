@@ -55,10 +55,15 @@ interface DiaSemana {
   jantar: number
 }
 
+interface Fazenda { id: number; nome: string }
+interface Turma   { id: number; nome: string; fazendaId: number }
+
 interface Props {
   restaurante: { id: number; nome: string; linkGrupoWhatsApp?: string | null; precoCafeManha?: number | null; precoAlmoco?: number | null; precoJantar?: number | null }
   pedidosIniciais: Pedido[]
   nomeUsuario: string
+  fazendas: Fazenda[]
+  turmas: Turma[]
 }
 
 const PRECO_KEY: Record<string, 'precoCafeManha' | 'precoAlmoco' | 'precoJantar'> = {
@@ -88,7 +93,7 @@ function formatarHora(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
-export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }: Props) {
+export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, fazendas, turmas }: Props) {
   const [pedidos, setPedidos] = useState<Pedido[]>(pedidosIniciais)
   const [data, setData] = useState(localDateStr(0))
   const [carregando, setCarregando] = useState(false)
@@ -98,6 +103,24 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
   const [semana, setSemana] = useState<DiaSemana[] | null>(null)
   const [carregandoSemana, setCarregandoSemana] = useState(false)
   const [mostrarSemana, setMostrarSemana] = useState(false)
+
+  // editar pedido
+  const [editandoId, setEditandoId] = useState<number | null>(null)
+  const [qtdsEditar, setQtdsEditar] = useState<Record<string, number>>({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 })
+  const [obsEditar, setObsEditar] = useState('')
+  const [erroEditar, setErroEditar] = useState('')
+  const [carregandoEditar, setCarregandoEditar] = useState(false)
+
+  // pedido avulso
+  const [modalAvulso, setModalAvulso] = useState(false)
+  const [avulsoNome, setAvulsoNome] = useState('')
+  const [avulsoSobrenome, setAvulsoSobrenome] = useState('')
+  const [avulsoData, setAvulsoData] = useState(localDateStr(0))
+  const [avulsoFazendaId, setAvulsoFazendaId] = useState<number | ''>('')
+  const [avulsoTurmaId, setAvulsoTurmaId] = useState<number | ''>('')
+  const [avulsoQtds, setAvulsoQtds] = useState<Record<string, number>>({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 })
+  const [erroAvulso, setErroAvulso] = useState('')
+  const [carregandoAvulso, setCarregandoAvulso] = useState(false)
 
   async function buscarData(novaData: string) {
     setData(novaData)
@@ -160,6 +183,85 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
     window.location.href = '/login'
   }
 
+  const TIPOS = ['CAFE_MANHA', 'ALMOCO', 'JANTAR'] as const
+
+
+  function abrirEditar(pedido: Pedido) {
+    const mapa: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 }
+    for (const item of pedido.versoes[0]?.itens ?? []) mapa[item.tipoRefeicao] = item.quantidade
+    setQtdsEditar(mapa)
+    setObsEditar('')
+    setErroEditar('')
+    setEditandoId(pedido.id)
+  }
+
+  async function salvarEditar() {
+    if (!editandoId) return
+    if (obsEditar.trim().length < 5) { setErroEditar('Informe a observação (mínimo 5 caracteres)'); return }
+    if (!TIPOS.some((t) => qtdsEditar[t] > 0)) { setErroEditar('Informe pelo menos uma refeição com quantidade > 0'); return }
+    setCarregandoEditar(true)
+    setErroEditar('')
+    try {
+      const res = await fetch(`/api/restaurante/pedidos/${editandoId}/editar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itens: TIPOS.map((t) => ({ tipoRefeicao: t, quantidade: qtdsEditar[t] ?? 0 })),
+          observacao: obsEditar.trim(),
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setErroEditar(json.error || 'Erro ao editar'); return }
+      setPedidos((prev) => prev.map((p) => (p.id === editandoId ? { ...p, ...json } : p)))
+      setEditandoId(null)
+    } catch {
+      setErroEditar('Erro de conexão')
+    } finally {
+      setCarregandoEditar(false)
+    }
+  }
+
+  function abrirAvulso() {
+    setAvulsoNome('')
+    setAvulsoSobrenome('')
+    setAvulsoData(data)
+    setAvulsoFazendaId('')
+    setAvulsoTurmaId('')
+    setAvulsoQtds({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 })
+    setErroAvulso('')
+    setModalAvulso(true)
+  }
+
+  async function salvarAvulso() {
+    if (!avulsoNome.trim()) { setErroAvulso('Informe o nome'); return }
+    if (!avulsoSobrenome.trim()) { setErroAvulso('Informe o sobrenome'); return }
+    if (!TIPOS.some((t) => avulsoQtds[t] > 0)) { setErroAvulso('Informe pelo menos uma refeição'); return }
+    setCarregandoAvulso(true)
+    setErroAvulso('')
+    try {
+      const res = await fetch('/api/restaurante/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nomeVisitante: avulsoNome.trim(),
+          sobrenomeVisitante: avulsoSobrenome.trim(),
+          dataRefeicao: avulsoData,
+          ...(avulsoFazendaId ? { fazendaId: avulsoFazendaId } : {}),
+          ...(avulsoTurmaId  ? { turmaId:  avulsoTurmaId  } : {}),
+          itens: TIPOS.map((t) => ({ tipoRefeicao: t, quantidade: avulsoQtds[t] ?? 0 })),
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setErroAvulso(json.error || 'Erro ao lançar pedido'); return }
+      if (avulsoData === data) setPedidos((prev) => [...prev, json])
+      setModalAvulso(false)
+    } catch {
+      setErroAvulso('Erro de conexão')
+    } finally {
+      setCarregandoAvulso(false)
+    }
+  }
+
   // Totais consolidados por tipo
   const totais: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 }
   pedidos.forEach((p) => {
@@ -212,6 +314,12 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
             <p className="text-xs text-gray-400 mt-0.5">Olá, {nomeUsuario}</p>
           </div>
           <div className="flex items-center gap-2 mt-1">
+            <button
+              onClick={abrirAvulso}
+              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            >
+              + Pedido Avulso
+            </button>
             {restaurante.linkGrupoWhatsApp && (
               <a
                 href={restaurante.linkGrupoWhatsApp}
@@ -472,11 +580,202 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario }:
                     <span className="text-sm font-semibold">Entrega confirmada</span>
                   </div>
                 )}
+
+                <div className="print:hidden">
+                  <button
+                    onClick={() => abrirEditar(pedido)}
+                    className="w-full border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-medium py-2 rounded-lg transition-colors"
+                  >
+                    Editar Pedido
+                  </button>
+                </div>
               </div>
             )
           })}
         </div>
       </div>
+
+      {/* ── Modal editar pedido ── */}
+      {editandoId !== null && (() => {
+        const pedidoEditando = pedidos.find((p) => p.id === editandoId)
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditandoId(null)}>
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+              <div>
+                <h2 className="text-base font-bold text-gray-800">Editar Pedido #{editandoId}</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {pedidoEditando?.fazenda?.nome ?? '—'} · {pedidoEditando?.requisitante?.nome ?? ([pedidoEditando?.nomeVisitante, pedidoEditando?.sobrenomeVisitante].filter(Boolean).join(' ') || 'Visitante')}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">Quantidades</p>
+                {TIPOS.map((tipo) => (
+                  <div key={tipo} className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-gray-600">{TIPO_LABELS[tipo]}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setQtdsEditar((p) => ({ ...p, [tipo]: Math.max(0, (p[tipo] ?? 0) - 1) }))}
+                        className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50 flex items-center justify-center font-bold"
+                      >−</button>
+                      <span className="w-8 text-center font-bold text-gray-900">{qtdsEditar[tipo] ?? 0}</span>
+                      <button
+                        onClick={() => setQtdsEditar((p) => ({ ...p, [tipo]: (p[tipo] ?? 0) + 1 }))}
+                        className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50 flex items-center justify-center font-bold"
+                      >+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Observação <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={obsEditar}
+                  onChange={(e) => { setObsEditar(e.target.value); setErroEditar('') }}
+                  placeholder="Descreva o motivo da alteração..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                  rows={3}
+                  autoFocus
+                />
+                {erroEditar && <p className="text-xs text-red-600">{erroEditar}</p>}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditandoId(null)}
+                  disabled={carregandoEditar}
+                  className="flex-1 border border-gray-200 text-gray-600 py-2 rounded-lg hover:bg-gray-50 text-sm"
+                >Cancelar</button>
+                <button
+                  onClick={salvarEditar}
+                  disabled={carregandoEditar}
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 text-sm font-semibold"
+                >{carregandoEditar ? 'Salvando...' : 'Salvar'}</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── Modal pedido avulso ── */}
+      {modalAvulso && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalAvulso(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div>
+              <h2 className="text-base font-bold text-gray-800">Pedido Avulso</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Para quem chegou sem cadastro.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">Nome <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={avulsoNome}
+                  onChange={(e) => { setAvulsoNome(e.target.value); setErroAvulso('') }}
+                  placeholder="Nome"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">Sobrenome <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={avulsoSobrenome}
+                  onChange={(e) => { setAvulsoSobrenome(e.target.value); setErroAvulso('') }}
+                  placeholder="Sobrenome"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">Data das refeições</label>
+              <input
+                type="date"
+                value={avulsoData}
+                onChange={(e) => setAvulsoData(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+
+            {fazendas.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">Fazenda</label>
+                <select
+                  value={avulsoFazendaId}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : Number(e.target.value)
+                    setAvulsoFazendaId(val)
+                    setAvulsoTurmaId('')
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">— Selecione —</option>
+                  {fazendas.map((f) => (
+                    <option key={f.id} value={f.id}>{f.nome}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {avulsoFazendaId !== '' && turmas.filter((t) => t.fazendaId === avulsoFazendaId).length > 0 && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">Turma</label>
+                <select
+                  value={avulsoTurmaId}
+                  onChange={(e) => setAvulsoTurmaId(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">— Selecione —</option>
+                  {turmas.filter((t) => t.fazendaId === avulsoFazendaId).map((t) => (
+                    <option key={t.id} value={t.id}>{t.nome}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700">Refeições</p>
+              {TIPOS.map((tipo) => (
+                <div key={tipo} className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-gray-600">{TIPO_LABELS[tipo]}</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setAvulsoQtds((p) => ({ ...p, [tipo]: Math.max(0, (p[tipo] ?? 0) - 1) }))}
+                      className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50 flex items-center justify-center font-bold"
+                    >−</button>
+                    <span className="w-8 text-center font-bold text-gray-900">{avulsoQtds[tipo] ?? 0}</span>
+                    <button
+                      onClick={() => setAvulsoQtds((p) => ({ ...p, [tipo]: (p[tipo] ?? 0) + 1 }))}
+                      className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50 flex items-center justify-center font-bold"
+                    >+</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {erroAvulso && <p className="text-xs text-red-600">{erroAvulso}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setModalAvulso(false)}
+                disabled={carregandoAvulso}
+                className="flex-1 border border-gray-200 text-gray-600 py-2 rounded-lg hover:bg-gray-50 text-sm"
+              >Cancelar</button>
+              <button
+                onClick={salvarAvulso}
+                disabled={carregandoAvulso}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 text-sm font-semibold"
+              >{carregandoAvulso ? 'Salvando...' : 'Lançar Pedido'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

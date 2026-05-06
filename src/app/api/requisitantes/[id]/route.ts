@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs'
 
 const schema = z.object({
   nome: z.string().min(1).optional(),
+  login: z.string().min(1).optional(),
   pin: z.string().min(4).max(6).regex(/^\d+$/).optional(),
   role: z.enum(['ADMIN', 'REQUISITANTE']).optional(),
   fazendaId: z.number().int().positive().optional(),

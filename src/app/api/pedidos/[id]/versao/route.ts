@@ -14,6 +14,7 @@ const schema = z.object({
   usuarioId: z.number().int().positive(),
   itens: z.array(itemSchema).min(1),
   observacao: z.string().optional(),
+  dataRefeicao: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida').optional(),
 })
 
 export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos/[id]/versao'>) {
@@ -34,11 +35,11 @@ export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos
     const mes = ref.getUTCMonth()
     const dia = ref.getUTCDate()
 
-    // Deadlines em UTC (AMT UTC-4: 19:30 = 23:30 UTC | 8:00 = 12:00 UTC | 16:00 = 20:00 UTC)
+    // Deadlines em UTC (AMT UTC-4: 05:00 = 09:00 UTC | 12:00 = 16:00 UTC | 19:00 = 23:00 UTC)
     const deadlines: Record<string, Date> = {
-      CAFE_MANHA: new Date(Date.UTC(ano, mes, dia - 1, 23, 30)),
-      ALMOCO:     new Date(Date.UTC(ano, mes, dia, 12, 0)),
-      JANTAR:     new Date(Date.UTC(ano, mes, dia, 20, 0)),
+      CAFE_MANHA: new Date(Date.UTC(ano, mes, dia, 9, 0)),
+      ALMOCO:     new Date(Date.UTC(ano, mes, dia, 16, 0)),
+      JANTAR:     new Date(Date.UTC(ano, mes, dia, 23, 0)),
     }
 
     const itensExistentes = pedido.versoes[0]?.itens ?? []
@@ -64,6 +65,16 @@ export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos
       itens: itensMesclados,
       observacao: data.observacao,
     })
+
+    if (data.dataRefeicao) {
+      const tresHoras = new Date(pedido.criadoEm.getTime() + 3 * 60 * 60 * 1000)
+      if (agora <= tresHoras) {
+        await prisma.pedido.update({
+          where: { id: Number(id) },
+          data: { dataRefeicao: new Date(data.dataRefeicao + 'T12:00:00.000Z') },
+        })
+      }
+    }
 
     const pedidoAtualizado = await prisma.pedido.findUnique({
       where: { id: Number(id) },

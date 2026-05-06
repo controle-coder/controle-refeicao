@@ -81,6 +81,7 @@ export function TabelaPedidos({ pedidos, adminId, adminNome }: Props) {
 
   // editar
   const [qtds, setQtds] = useState<Record<string, number>>({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 })
+  const [novaData, setNovaData] = useState('')
   const [motivoEdicao, setMotivoEdicao] = useState('')
   const [historicoAberto, setHistoricoAberto] = useState(false)
 
@@ -109,11 +110,21 @@ export function TabelaPedidos({ pedidos, adminId, adminNome }: Props) {
     setHistoricoAberto(false)
   }
 
+  function toInputDate(d: Date | string | undefined): string {
+    if (!d) return ''
+    const dt = new Date(d)
+    const y = dt.getUTCFullYear()
+    const m = String(dt.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(dt.getUTCDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
   function abrirEditar() {
     if (!versaoAtual) return
     const mapa: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 }
     for (const item of versaoAtual.itens) mapa[item.tipoRefeicao] = item.quantidade
     setQtds(mapa)
+    setNovaData(toInputDate(selecionado?.dataRefeicao))
     setMotivoEdicao('')
     setErro('')
     setModal('editar')
@@ -139,6 +150,7 @@ export function TabelaPedidos({ pedidos, adminId, adminNome }: Props) {
         body: JSON.stringify({
           itens: TIPOS.map((t) => ({ tipoRefeicao: t, quantidade: qtds[t] })),
           motivo: motivoEdicao.trim(),
+          ...(novaData ? { dataRefeicao: novaData } : {}),
         }),
       })
       const data = await res.json()
@@ -253,6 +265,14 @@ export function TabelaPedidos({ pedidos, adminId, adminNome }: Props) {
 
             {/* Informações */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              {selecionado.dataRefeicao && (
+                <>
+                  <span className="text-gray-500">Data das refeições</span>
+                  <span className="font-medium text-gray-800">
+                    {new Date(selecionado.dataRefeicao).toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </span>
+                </>
+              )}
               <span className="text-gray-500">Restaurante</span>
               <span className="font-medium text-gray-800">{selecionado.restaurante.nome}</span>
               <span className="text-gray-500">Fazenda</span>
@@ -394,6 +414,17 @@ export function TabelaPedidos({ pedidos, adminId, adminNome }: Props) {
             <div className="bg-blue-50 rounded-lg px-3 py-2 text-sm">
               <span className="text-blue-600">Editado por: </span>
               <span className="font-semibold text-blue-800">{adminNome}</span>
+            </div>
+
+            {/* Data da refeição */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Data das refeições</label>
+              <input
+                type="date"
+                value={novaData}
+                onChange={(e) => setNovaData(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
             </div>
 
             {/* Quantidades */}

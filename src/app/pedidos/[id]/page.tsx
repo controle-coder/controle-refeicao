@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { notFound } from 'next/navigation'
+import { getSession } from '@/lib/auth'
+import { notFound, redirect } from 'next/navigation'
 import { DetalhePedido } from '@/components/pedido/DetalhePedido'
 
 export default async function DetalhePedidoPage({
@@ -7,6 +8,11 @@ export default async function DetalhePedidoPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const session = await getSession()
+  if (!session.id || session.role !== 'REQUISITANTE') {
+    redirect('/login')
+  }
+
   const { id } = await params
 
   const pedido = await prisma.pedido.findUnique({
@@ -28,9 +34,12 @@ export default async function DetalhePedidoPage({
 
   if (!pedido) notFound()
 
+  // Solicitante só pode ver os próprios pedidos
+  if (pedido.requisitanteId !== session.id) notFound()
+
   return (
     <div className="mt-2">
-      <DetalhePedido pedido={pedido as any} sessaoId={pedido.requisitanteId ?? null} sessaoRole="REQUISITANTE" />
+      <DetalhePedido pedido={pedido as any} sessaoId={session.id} sessaoRole="REQUISITANTE" />
     </div>
   )
 }

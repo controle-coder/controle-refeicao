@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import { TipoRefeicao } from '@/generated/prisma/enums'
 
 const TIPOS_REFEICAO: { valor: TipoRefeicao; label: string; pedidoAte: number }[] = [
-  { valor: 'CAFE_MANHA', label: 'Café da Manhã', pedidoAte: 19 * 60 },
-  { valor: 'ALMOCO',     label: 'Almoço',        pedidoAte: 19 * 60 },
-  { valor: 'JANTAR',     label: 'Jantar',         pedidoAte: 14 * 60 },
+  { valor: 'CAFE_MANHA', label: 'Café da Manhã', pedidoAte: 5 * 60 },
+  { valor: 'ALMOCO',     label: 'Almoço',        pedidoAte: 12 * 60 },
+  { valor: 'JANTAR',     label: 'Jantar',         pedidoAte: 19 * 60 },
 ]
 
 function minutosAgora() {
@@ -35,9 +35,9 @@ function podeEditarPedido(dataRefeicao: string, tipos: string[], status: string)
   const dia = ref.getUTCDate()
 
   for (const tipo of tipos) {
-    if (tipo === 'CAFE_MANHA' && agora >= new Date(ano, mes, dia - 1, 19, 30)) return false
-    if (tipo === 'ALMOCO'     && agora >= new Date(ano, mes, dia, 8, 0))        return false
-    if (tipo === 'JANTAR'     && agora >= new Date(ano, mes, dia, 16, 0))       return false
+    if (tipo === 'CAFE_MANHA' && agora >= new Date(ano, mes, dia, 5, 0))  return false
+    if (tipo === 'ALMOCO'     && agora >= new Date(ano, mes, dia, 12, 0)) return false
+    if (tipo === 'JANTAR'     && agora >= new Date(ano, mes, dia, 19, 0)) return false
   }
   return true
 }
@@ -85,31 +85,39 @@ interface PedidoResumo {
   versoes: Array<{ itens: Array<{ quantidade: number; tipoRefeicao: string }> }>
 }
 
+interface UsuarioLogado {
+  id: number
+  nome: string
+  fazendaId: number | null
+  turmaId: number | null
+}
+
 interface Props {
   restaurantes: Restaurante[]
   fazendas: Fazenda[]
   turmas: Turma[]
   requisitantes: Requisitante[]
+  usuarioLogado?: UsuarioLogado | null
 }
 
-export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes }: Props) {
+export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes, usuarioLogado }: Props) {
   const router = useRouter()
   const [etapa, setEtapa] = useState(1)
 
   // Etapa 1: quem está pedindo
-  const [requisitanteId, setRequisitanteId] = useState<number>(0)
+  const [requisitanteId, setRequisitanteId] = useState<number>(usuarioLogado?.id ?? 0)
 
   // Histórico
-  const [historicoAberto, setHistoricoAberto] = useState(false)
+  const [historicoAberto, setHistoricoAberto] = useState(!!usuarioLogado)
   const [pedidosHistorico, setPedidosHistorico] = useState<PedidoResumo[]>([])
-  const [carregandoHistorico, setCarregandoHistorico] = useState(false)
+  const [carregandoHistorico, setCarregandoHistorico] = useState(!!usuarioLogado)
 
   // Etapa 2: restaurante
   const [restauranteId, setRestauranteId] = useState<number | null>(null)
 
   // Etapa 3: fazenda/turma (preenchido automaticamente pelo requisitante)
-  const [fazendaId, setFazendaId] = useState<number>(0)
-  const [turmaId, setTurmaId] = useState<number>(0)
+  const [fazendaId, setFazendaId] = useState<number>(usuarioLogado?.fazendaId ?? 0)
+  const [turmaId, setTurmaId] = useState<number>(usuarioLogado?.turmaId ?? 0)
 
   // Etapa 4: refeições
   const [quantidades, setQuantidades] = useState<Record<string, number>>({})
@@ -120,14 +128,33 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
 
+  // Carrega histórico automaticamente quando o usuário já está logado
+  useEffect(() => {
+    if (usuarioLogado) {
+      fetch(`/api/pedidos?requisitanteId=${usuarioLogado.id}`)
+        .then((r) => r.json())
+        .then((data) => setPedidosHistorico(Array.isArray(data) ? data : []))
+        .catch(() => setPedidosHistorico([]))
+        .finally(() => setCarregandoHistorico(false))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     function handlePageShow(e: PageTransitionEvent) {
       if (e.persisted) {
         setEtapa(1)
-        setHistoricoAberto(false)
-        setRequisitanteId(0)
-        setFazendaId(0)
-        setTurmaId(0)
+        if (usuarioLogado) {
+          setHistoricoAberto(true)
+          setRequisitanteId(usuarioLogado.id)
+          setFazendaId(usuarioLogado.fazendaId ?? 0)
+          setTurmaId(usuarioLogado.turmaId ?? 0)
+        } else {
+          setHistoricoAberto(false)
+          setRequisitanteId(0)
+          setFazendaId(0)
+          setTurmaId(0)
+        }
         setPedidosHistorico([])
         setQuantidades({})
         setObservacoes({})
@@ -137,7 +164,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
     }
     window.addEventListener('pageshow', handlePageShow)
     return () => window.removeEventListener('pageshow', handlePageShow)
-  }, [])
+  }, []) // eslint-disable-line
 
   const requisitante = requisitantes.find((r) => r.id === requisitanteId)
   const contratos = requisitante?.contratos ?? []
@@ -246,8 +273,8 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
 
       <div className="p-4">
 
-        {/* Etapa 1: Quem é você — seleção de nome */}
-        {etapa === 1 && !historicoAberto && (
+        {/* Etapa 1: Quem é você — seleção de nome (apenas sem login) */}
+        {etapa === 1 && !historicoAberto && !usuarioLogado && (
           <div className="space-y-3">
             <p className="text-sm text-gray-500">Selecione seu nome para continuar:</p>
             <div className="space-y-2">
@@ -285,18 +312,20 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
             {/* Cabeçalho com nome, botão trocar e novo pedido */}
             <div className="flex items-center justify-between bg-green-50 rounded-lg px-4 py-3">
               <div>
-                <p className="font-semibold text-gray-800">{requisitante?.nome}</p>
+                <p className="font-semibold text-gray-800">{requisitante?.nome ?? usuarioLogado?.nome}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {requisitante?.fazenda.nome} · {requisitante?.turma.nome}
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <button
-                  onClick={trocarRequisitante}
-                  className="text-xs text-green-700 underline underline-offset-2"
-                >
-                  Trocar
-                </button>
+                {!usuarioLogado && (
+                  <button
+                    onClick={trocarRequisitante}
+                    className="text-xs text-green-700 underline underline-offset-2"
+                  >
+                    Trocar
+                  </button>
+                )}
                 <button
                   onClick={() => { setHistoricoAberto(false); setEtapa(2) }}
                   className="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700 font-semibold whitespace-nowrap"

@@ -78,6 +78,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
   const [editando, setEditando] = useState(false)
   const [quantidades, setQuantidades] = useState<Record<string, number>>({})
   const [observacoes, setObservacoes] = useState<Record<string, string>>({})
+  const [novaData, setNovaData] = useState('')
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [modalGrupo, setModalGrupo] = useState<{ mensagem: string; link: string } | null>(null)
@@ -85,15 +86,29 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
 
   const versaoAtual = pedido.versoes.find((v) => v.numero === pedido.versaoAtual)
 
+  function podeEditarData(): boolean {
+    if (pedido.status === 'CANCELADO') return false
+    const criadoEm = new Date(pedido.criadoEm)
+    return new Date() < new Date(criadoEm.getTime() + 3 * 60 * 60 * 1000)
+  }
+
+  function toInputDate(d: Date | string): string {
+    const dt = new Date(d)
+    const y = dt.getUTCFullYear()
+    const m = String(dt.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(dt.getUTCDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
   function tipoExpirado(tipo: string): boolean {
     const agora = new Date()
     const ref = new Date(pedido.dataRefeicao)
     const ano = ref.getUTCFullYear()
     const mes = ref.getUTCMonth()
     const dia = ref.getUTCDate()
-    if (tipo === 'CAFE_MANHA') return agora >= new Date(ano, mes, dia - 1, 19, 30)
-    if (tipo === 'ALMOCO')     return agora >= new Date(ano, mes, dia, 8, 0)
-    if (tipo === 'JANTAR')     return agora >= new Date(ano, mes, dia, 16, 0)
+    if (tipo === 'CAFE_MANHA') return agora >= new Date(ano, mes, dia, 5, 0)
+    if (tipo === 'ALMOCO')     return agora >= new Date(ano, mes, dia, 12, 0)
+    if (tipo === 'JANTAR')     return agora >= new Date(ano, mes, dia, 19, 0)
     return false
   }
 
@@ -114,6 +129,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
     })
     setQuantidades(qtds)
     setObservacoes(obs)
+    setNovaData(toInputDate(pedido.dataRefeicao))
     setEditando(true)
   }
 
@@ -136,7 +152,11 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
       const res = await fetch(`/api/pedidos/${pedido.id}/versao`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuarioId: sessaoId, itens }),
+        body: JSON.stringify({
+          usuarioId: sessaoId,
+          itens,
+          ...(podeEditarData() && novaData ? { dataRefeicao: novaData } : {}),
+        }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -278,10 +298,10 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
                 ) : (
                   <p className="text-xs text-gray-400 text-center py-1">
                     {versaoAtual?.itens.some((i) => i.tipoRefeicao === 'CAFE_MANHA')
-                      ? 'Prazo de edição do Café da Manhã encerrado às 19:30 do dia anterior'
+                      ? 'Prazo de edição do Café da Manhã encerrado às 5:00 do dia da retirada'
                       : versaoAtual?.itens.some((i) => i.tipoRefeicao === 'ALMOCO')
-                      ? 'Prazo de edição do Almoço encerrado às 8:00 do dia da retirada'
-                      : 'Prazo de edição do Jantar encerrado às 16:00 do dia da retirada'}
+                      ? 'Prazo de edição do Almoço encerrado às 12:00 do dia da retirada'
+                      : 'Prazo de edição do Jantar encerrado às 19:00 do dia da retirada'}
                   </p>
                 )}
                 {(sessaoRole === 'ADMIN') && (
@@ -300,6 +320,20 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
         {editando && (
           <div className="border-t pt-3 space-y-4">
             <p className="text-sm font-medium text-gray-700">Nova Versão (V{pedido.versaoAtual + 1})</p>
+
+            {podeEditarData() && (
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Data das refeições</label>
+                <input
+                  type="date"
+                  value={novaData}
+                  onChange={(e) => setNovaData(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+                <p className="text-xs text-gray-400">Disponível por 3h após a criação do pedido.</p>
+              </div>
+            )}
+
             {TIPOS_REFEICAO.map((tipo) => {
               const expirado = tipoExpirado(tipo.valor)
               return (

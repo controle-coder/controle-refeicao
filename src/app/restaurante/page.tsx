@@ -41,12 +41,26 @@ export default async function RestaurantePage() {
     orderBy: { criadoEm: 'asc' },
   })
 
+  const fazendas = await prisma.fazenda.findMany({
+    where: { ativo: true, contratos: { some: { restaurantes: { some: { id: restaurante.id } } } } },
+    select: { id: true, nome: true },
+    orderBy: { nome: 'asc' },
+  })
+
+  const turmas = await prisma.turma.findMany({
+    where: { ativo: true, contratos: { some: { restaurantes: { some: { id: restaurante.id } } } } },
+    select: { id: true, nome: true, fazendaId: true },
+    orderBy: { nome: 'asc' },
+  })
+
   return (
     <div className="min-h-screen bg-gray-50">
       <PainelRestaurante
         restaurante={restaurante}
         pedidosIniciais={pedidos as any}
         nomeUsuario={session.nome}
+        fazendas={fazendas}
+        turmas={turmas}
       />
     </div>
   )

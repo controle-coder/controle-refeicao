@@ -18,6 +18,11 @@ export async function GET(request: NextRequest, ctx: RouteContext<'/api/relatori
   try {
     await requireAdmin()
     const { tipo } = await ctx.params
+
+    if (!['restaurante', 'fazenda', 'turma'].includes(tipo)) {
+      return Response.json({ error: 'Tipo inválido' }, { status: 400 })
+    }
+
     const { searchParams } = new URL(request.url)
 
     const deStr = searchParams.get('de')
@@ -29,15 +34,25 @@ export async function GET(request: NextRequest, ctx: RouteContext<'/api/relatori
       ? { dataRefeicao: { ...(de ? { gte: de } : {}), ...(ate ? { lte: ate } : {}) } }
       : {}
 
-    const idParam = searchParams.get(`${tipo}Id`)
-    const idFilter = idParam ? { [`${tipo}Id`]: Number(idParam) } : {}
+    const contratoId     = searchParams.get('contratoId')
+    const fazendaId      = searchParams.get('fazendaId')
+    const turmaId        = searchParams.get('turmaId')
+    const restauranteId  = searchParams.get('restauranteId')
+    const requisitanteId = searchParams.get('requisitanteId')
 
-    if (!['restaurante', 'fazenda', 'turma'].includes(tipo)) {
-      return Response.json({ error: 'Tipo inválido' }, { status: 400 })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = { ...dateFilter }
+    if (fazendaId)      where.fazendaId     = Number(fazendaId)
+    if (turmaId)        where.turmaId       = Number(turmaId)
+    if (restauranteId)  where.restauranteId = Number(restauranteId)
+    if (requisitanteId) where.requisitanteId = Number(requisitanteId)
+    if (contratoId)     where.requisitante  = {
+      ...(where.requisitante ?? {}),
+      contratos: { some: { id: Number(contratoId) } },
     }
 
     const pedidos = await prisma.pedido.findMany({
-      where: { ...idFilter, ...dateFilter },
+      where,
       include: INCLUDE_PEDIDO,
       orderBy: { dataRefeicao: 'desc' },
     })

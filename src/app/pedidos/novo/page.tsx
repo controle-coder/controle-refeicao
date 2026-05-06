@@ -1,31 +1,38 @@
 export const dynamic = "force-dynamic";
+
+import { redirect } from 'next/navigation'
+import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { FormularioPedido } from '@/components/pedido/FormularioPedido'
 
 export default async function NovoPedidoPage() {
-  const [restaurantes, fazendas, turmas, requisitantes] = await Promise.all([
-    prisma.restaurante.findMany({ where: { ativo: true }, orderBy: { nome: 'asc' } }),
-    prisma.fazenda.findMany({ where: { ativo: true }, orderBy: { nome: 'asc' } }),
-    prisma.turma.findMany({ where: { ativo: true }, include: { fazenda: true }, orderBy: { nome: 'asc' } }),
-    prisma.requisitante.findMany({
-      where: { ativo: true, role: 'REQUISITANTE' },
+  const session = await getSession()
+  if (!session.id || session.role !== 'REQUISITANTE') {
+    redirect('/login')
+  }
+
+  const [req, restaurantes, fazendas, turmas] = await Promise.all([
+    prisma.requisitante.findUnique({
+      where: { id: session.id },
       include: {
         fazenda: true,
         turma: true,
         contratos: {
           include: {
-            fazendas: { select: { id: true } },
+            fazendas:     { select: { id: true } },
             restaurantes: { select: { id: true } },
-            turmas: { select: { id: true } },
+            turmas:       { select: { id: true } },
           },
         },
       },
-      orderBy: { nome: 'asc' },
     }),
+    prisma.restaurante.findMany({ where: { ativo: true }, orderBy: { nome: 'asc' } }),
+    prisma.fazenda.findMany({ where: { ativo: true }, orderBy: { nome: 'asc' } }),
+    prisma.turma.findMany({ where: { ativo: true }, include: { fazenda: true }, orderBy: { nome: 'asc' } }),
   ])
 
-  // Key única por render: força React a remontar o formulário a cada
-  // navegação para esta página, descartando estado anterior do cache de rota.
+  if (!req) redirect('/login')
+
   const pageKey = Date.now()
 
   return (
@@ -36,7 +43,8 @@ export default async function NovoPedidoPage() {
         restaurantes={restaurantes}
         fazendas={fazendas}
         turmas={turmas as any}
-        requisitantes={requisitantes as any}
+        requisitantes={[req] as any}
+        usuarioLogado={{ id: req.id, nome: req.nome, fazendaId: req.fazendaId, turmaId: req.turmaId }}
       />
     </div>
   )

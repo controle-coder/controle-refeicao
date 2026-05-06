@@ -15,11 +15,9 @@ const sessionOptions = {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Rotas públicas ou com autenticação própria
+  // Rotas totalmente públicas
   if (
-    pathname.startsWith('/pedidos') ||
     pathname.startsWith('/pedido-visitante') ||
-    pathname.startsWith('/api/pedidos') ||
     pathname.startsWith('/api/restaurantes') ||
     pathname.startsWith('/api/fazendas') ||
     pathname.startsWith('/api/turmas') ||
@@ -32,6 +30,14 @@ export async function proxy(request: NextRequest) {
 
   const response = NextResponse.next()
   const session = await getIronSession<SessionData>(request, response, sessionOptions)
+
+  // Área de pedidos: role REQUISITANTE ou ADMIN
+  if (pathname.startsWith('/pedidos') || pathname.startsWith('/api/pedidos')) {
+    if (!session.id || (session.role !== 'REQUISITANTE' && session.role !== 'ADMIN')) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    return response
+  }
 
   // Área do restaurante: role RESTAURANTE
   if (pathname.startsWith('/restaurante') || pathname.startsWith('/api/restaurante')) {
