@@ -19,6 +19,7 @@ export interface ItemMensagem {
 }
 
 export interface DadosMensagem {
+  numeroPedido: number
   versao: number
   data: Date
   fazenda: string
@@ -44,7 +45,7 @@ export function gerarMensagemPedido(dados: DadosMensagem): string {
     })
     .join('\n\n')
 
-  let mensagem = `*PEDIDO DE REFEIÇÃO - V${dados.versao}*\n`
+  let mensagem = `*PEDIDO DE REFEIÇÃO #${dados.numeroPedido} - V${dados.versao}*\n`
   mensagem += `📅 Data: ${dataFormatada}\n`
   mensagem += `🏭 Fazenda: ${dados.fazenda}\n`
   mensagem += `👥 Turma: ${dados.turma}\n`

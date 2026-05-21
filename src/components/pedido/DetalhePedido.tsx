@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { TipoRefeicao } from '@/generated/prisma/enums'
 import { gerarMensagemPedido, gerarLinkWhatsApp } from '@/lib/whatsapp'
 
@@ -74,7 +73,6 @@ function nomeAutor(pedido: Pedido): string {
 }
 
 export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
-  const router = useRouter()
   const [editando, setEditando] = useState(false)
   const [quantidades, setQuantidades] = useState<Record<string, number>>({})
   const [observacoes, setObservacoes] = useState<Record<string, string>>({})
@@ -153,7 +151,6 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          usuarioId: sessaoId,
           itens,
           ...(podeEditarData() && novaData ? { dataRefeicao: novaData } : {}),
         }),
@@ -178,7 +175,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'CANCELADO' }),
     })
-    router.refresh()
+    window.location.href = window.location.href
   }
 
   async function copiarMensagem(mensagem: string) {
@@ -190,6 +187,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
   async function enviarWhatsApp() {
     if (!versaoAtual) return
     const mensagem = gerarMensagemPedido({
+      numeroPedido: pedido.id,
       versao: pedido.versaoAtual,
       data: new Date(pedido.dataRefeicao),
       fazenda: pedido.fazenda?.nome ?? '—',
@@ -199,7 +197,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
     })
 
     if (pedido.restaurante.linkGrupoWhatsApp) {
-      await navigator.clipboard.writeText(mensagem).catch(() => {})
+      try { await navigator.clipboard.writeText(mensagem) } catch {}
       setCopiado(false)
       setModalGrupo({ mensagem, link: pedido.restaurante.linkGrupoWhatsApp })
     } else {
@@ -212,7 +210,10 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'ENVIADO' }),
     })
-    router.refresh()
+
+    if (!pedido.restaurante.linkGrupoWhatsApp) {
+      window.location.href = window.location.href
+    }
   }
 
   return (
@@ -426,7 +427,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
                 {copiado ? '✓ Copiado!' : 'Copiar novamente'}
               </button>
               <button
-                onClick={() => { window.open(modalGrupo.link, '_blank'); setModalGrupo(null) }}
+                onClick={() => { window.open(modalGrupo.link, '_blank'); setModalGrupo(null); window.location.href = window.location.href }}
                 className="flex-1 bg-[#25D366] hover:bg-[#1ebe5c] text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm"
               >
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
