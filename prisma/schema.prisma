@@ -10,17 +10,19 @@ datasource db {
 // ─── Entidades base ──────────────────────────────────────────────────────────
 
 model Contrato {
-  id        Int      @id @default(autoincrement())
-  nome      String
-  numero    String?
-  descricao String?
-  ativo     Boolean  @default(true)
-  criadoEm  DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  nome       String
+  numero     String?
+  descricao  String?
+  anotacoes  String?
+  ativo      Boolean  @default(true)
+  criadoEm   DateTime @default(now())
 
-  requisitantes Requisitante[] // many-to-many
-  fazendas      Fazenda[]
-  restaurantes  Restaurante[]
-  turmas        Turma[]
+  requisitantes  Requisitante[] // many-to-many
+  fazendas       Fazenda[]
+  restaurantes   Restaurante[]
+  turmas         Turma[]
+  precosContrato PrecoContrato[]
 }
 
 model Restaurante {
@@ -28,15 +30,29 @@ model Restaurante {
   nome               String
   telefone           String  // somente dígitos, ex: 5565999998888
   linkGrupoWhatsApp  String? // link de convite do grupo, ex: https://chat.whatsapp.com/XXXXX
-  precoCafeManha     Float?
-  precoAlmoco        Float?
-  precoJantar        Float?
+  precoCafeManha     Float?  // @deprecated — usar PrecoContrato
+  precoAlmoco        Float?  // @deprecated — usar PrecoContrato
+  precoJantar        Float?  // @deprecated — usar PrecoContrato
   ativo              Boolean @default(true)
   criadoEm           DateTime @default(now())
 
-  pedidos   Pedido[]
-  contratos Contrato[]
-  usuarios  Requisitante[] @relation("UsuariosRestaurante")
+  pedidos        Pedido[]
+  contratos      Contrato[]
+  usuarios       Requisitante[] @relation("UsuariosRestaurante")
+  precosContrato PrecoContrato[]
+}
+
+model PrecoContrato {
+  id              Int         @id @default(autoincrement())
+  contratoId      Int
+  contrato        Contrato    @relation(fields: [contratoId], references: [id])
+  restauranteId   Int
+  restaurante     Restaurante @relation(fields: [restauranteId], references: [id])
+  precoCafeManha  Float?
+  precoAlmoco     Float?
+  precoJantar     Float?
+
+  @@unique([contratoId, restauranteId])
 }
 
 model Fazenda {
@@ -88,6 +104,7 @@ model Requisitante {
 
 enum Role {
   ADMIN
+  GESTOR
   REQUISITANTE
   RESTAURANTE
 }

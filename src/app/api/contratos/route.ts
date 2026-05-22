@@ -3,13 +3,22 @@ import { prisma } from '@/lib/prisma'
 import { requireAdmin, authError } from '@/lib/auth'
 import { z } from 'zod'
 
+const precoSchema = z.object({
+  restauranteId: z.number().int().positive(),
+  precoCafeManha: z.number().nonnegative().nullable().optional(),
+  precoAlmoco: z.number().nonnegative().nullable().optional(),
+  precoJantar: z.number().nonnegative().nullable().optional(),
+})
+
 const schema = z.object({
   nome: z.string().min(1, 'Nome obrigatório'),
   numero: z.string().optional(),
   descricao: z.string().optional(),
+  anotacoes: z.string().optional(),
   fazendaIds: z.array(z.number().int().positive()).optional(),
   restauranteIds: z.array(z.number().int().positive()).optional(),
   turmaIds: z.array(z.number().int().positive()).optional(),
+  precos: z.array(precoSchema).optional(),
 })
 
 const INCLUDE = {
@@ -17,6 +26,7 @@ const INCLUDE = {
   fazendas: { select: { id: true, nome: true }, orderBy: { nome: 'asc' } },
   restaurantes: { select: { id: true, nome: true }, orderBy: { nome: 'asc' } },
   turmas: { select: { id: true, nome: true, fazendaId: true }, orderBy: { nome: 'asc' } },
+  precosContrato: true,
 } as const
 
 export async function GET() {
@@ -36,13 +46,23 @@ export async function POST(request: NextRequest) {
   try {
     await requireAdmin()
     const body = await request.json()
-    const { fazendaIds, restauranteIds, turmaIds, ...rest } = schema.parse(body)
+    const { fazendaIds, restauranteIds, turmaIds, precos, ...rest } = schema.parse(body)
     const item = await prisma.contrato.create({
       data: {
         ...rest,
         fazendas: fazendaIds?.length ? { connect: fazendaIds.map((id) => ({ id })) } : undefined,
         restaurantes: restauranteIds?.length ? { connect: restauranteIds.map((id) => ({ id })) } : undefined,
         turmas: turmaIds?.length ? { connect: turmaIds.map((id) => ({ id })) } : undefined,
+        precosContrato: precos?.length ? {
+          createMany: {
+            data: precos.map((p) => ({
+              restauranteId: p.restauranteId,
+              precoCafeManha: p.precoCafeManha ?? null,
+              precoAlmoco: p.precoAlmoco ?? null,
+              precoJantar: p.precoJantar ?? null,
+            })),
+          },
+        } : undefined,
       },
       include: INCLUDE,
     })

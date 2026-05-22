@@ -4,17 +4,33 @@ import { useState } from 'react'
 
 interface Item { id: number; nome: string }
 interface Turma { id: number; nome: string; fazendaId: number; fazenda?: { nome: string } }
+interface PrecoContrato {
+  id: number
+  contratoId: number
+  restauranteId: number
+  precoCafeManha: number | null
+  precoAlmoco: number | null
+  precoJantar: number | null
+}
 interface Contrato {
   id: number
   nome: string
   numero: string | null
   descricao: string | null
+  anotacoes: string | null
   ativo: boolean
   criadoEm: string
   _count: { requisitantes: number }
   fazendas: Item[]
   restaurantes: Item[]
   turmas: Turma[]
+  precosContrato: PrecoContrato[]
+}
+
+interface PrecoForm {
+  precoCafeManha: string
+  precoAlmoco: string
+  precoJantar: string
 }
 
 interface Props {
@@ -29,17 +45,19 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<Contrato | null>(null)
   const [form, setForm] = useState({
-    nome: '', numero: '', descricao: '',
+    nome: '', numero: '', descricao: '', anotacoes: '',
     fazendaIds: [] as number[],
     restauranteIds: [] as number[],
     turmaIds: [] as number[],
   })
+  const [precos, setPrecos] = useState<Record<number, PrecoForm>>({})
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
 
   function abrirNovo() {
     setEditando(null)
-    setForm({ nome: '', numero: '', descricao: '', fazendaIds: [], restauranteIds: [], turmaIds: [] })
+    setForm({ nome: '', numero: '', descricao: '', anotacoes: '', fazendaIds: [], restauranteIds: [], turmaIds: [] })
+    setPrecos({})
     setErro('')
     setModalAberto(true)
   }
@@ -50,10 +68,20 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
       nome: item.nome,
       numero: item.numero ?? '',
       descricao: item.descricao ?? '',
+      anotacoes: item.anotacoes ?? '',
       fazendaIds: item.fazendas.map((f) => f.id),
       restauranteIds: item.restaurantes.map((r) => r.id),
       turmaIds: item.turmas.map((t) => t.id),
     })
+    const precosMap: Record<number, PrecoForm> = {}
+    for (const p of item.precosContrato) {
+      precosMap[p.restauranteId] = {
+        precoCafeManha: p.precoCafeManha != null ? String(p.precoCafeManha) : '',
+        precoAlmoco: p.precoAlmoco != null ? String(p.precoAlmoco) : '',
+        precoJantar: p.precoJantar != null ? String(p.precoJantar) : '',
+      }
+    }
+    setPrecos(precosMap)
     setErro('')
     setModalAberto(true)
   }
@@ -65,17 +93,40 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
     })
   }
 
+  const parsePreco = (v: string) => {
+    const n = parseFloat(v.replace(',', '.'))
+    return isNaN(n) ? null : n
+  }
+
+  function setPrecoField(restId: number, field: keyof PrecoForm, value: string) {
+    setPrecos((prev) => ({
+      ...prev,
+      [restId]: { ...(prev[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '' }), [field]: value },
+    }))
+  }
+
   async function salvar() {
     if (!form.nome.trim()) { setErro('Nome obrigatório'); return }
     setCarregando(true)
     try {
+      const precosArray = form.restauranteIds.map((restId) => {
+        const p = precos[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '' }
+        return {
+          restauranteId: restId,
+          precoCafeManha: parsePreco(p.precoCafeManha),
+          precoAlmoco: parsePreco(p.precoAlmoco),
+          precoJantar: parsePreco(p.precoJantar),
+        }
+      })
       const body = {
         nome: form.nome.trim(),
         numero: form.numero.trim() || undefined,
         descricao: form.descricao.trim() || undefined,
+        anotacoes: form.anotacoes.trim() || undefined,
         fazendaIds: form.fazendaIds,
         restauranteIds: form.restauranteIds,
         turmaIds: form.turmaIds,
+        precos: precosArray,
       }
       const url = editando ? `/api/contratos/${editando.id}` : '/api/contratos'
       const res = await fetch(url, {
@@ -135,13 +186,26 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
                 <td className="px-4 py-3 font-medium text-gray-800">
                   <div>{item.nome}</div>
                   {item.descricao && <div className="text-xs text-gray-400 truncate max-w-xs">{item.descricao}</div>}
+                  {item.anotacoes && (
+                    <div className="text-xs text-amber-600 mt-1 max-w-xs whitespace-pre-line line-clamp-2" title={item.anotacoes}>
+                      📝 {item.anotacoes}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-gray-500">{item.numero ?? '—'}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
-                    {item.restaurantes.map((r) => (
-                      <span key={r.id} className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">🍴 {r.nome}</span>
-                    ))}
+                    {item.restaurantes.map((r) => {
+                      const pc = item.precosContrato.find((p) => p.restauranteId === r.id)
+                      const precoStr = pc
+                        ? [pc.precoCafeManha, pc.precoAlmoco, pc.precoJantar].filter((v) => v != null).map((v) => `R$${v!.toFixed(2).replace('.', ',')}`).join(' / ')
+                        : null
+                      return (
+                        <span key={r.id} className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
+                          🍴 {r.nome}{precoStr ? ` (${precoStr})` : ''}
+                        </span>
+                      )
+                    })}
                     {item.fazendas.map((f) => (
                       <span key={f.id} className="text-xs bg-yellow-50 text-yellow-700 px-1.5 py-0.5 rounded">🏭 {f.nome}</span>
                     ))}
@@ -197,6 +261,12 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
                   placeholder="Detalhes do contrato (opcional)" rows={2}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm resize-none" />
               </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Anotações / Particularidades</label>
+                <textarea value={form.anotacoes} onChange={(e) => setForm((p) => ({ ...p, anotacoes: e.target.value }))}
+                  placeholder="Ex: Não aceita pedido após 15h, somente almoço aos sábados..." rows={4}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm resize-none" />
+              </div>
             </div>
 
             {/* Restaurantes */}
@@ -213,6 +283,44 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
                 ))}
               </div>
             </div>
+
+            {/* Preços por restaurante */}
+            {form.restauranteIds.length > 0 && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">💰 Preços por restaurante (R$)</label>
+                <div className="border border-gray-200 rounded-lg divide-y">
+                  {form.restauranteIds.map((restId) => {
+                    const rest = restaurantes.find((r) => r.id === restId)
+                    const p = precos[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '' }
+                    return (
+                      <div key={restId} className="px-3 py-2 space-y-1.5">
+                        <p className="text-sm font-medium text-gray-700">{rest?.nome}</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {([
+                            { label: 'Cafe', field: 'precoCafeManha' as const },
+                            { label: 'Almoco', field: 'precoAlmoco' as const },
+                            { label: 'Jantar', field: 'precoJantar' as const },
+                          ]).map(({ label, field }) => (
+                            <div key={field}>
+                              <label className="block text-[10px] text-gray-400 mb-0.5">{label}</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                placeholder="0,00"
+                                value={p[field]}
+                                onChange={(e) => setPrecoField(restId, field, e.target.value)}
+                                className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-500"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Fazendas */}
             <div>
