@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
 import { TipoRefeicao } from '@/generated/prisma/enums'
 
 const TIPOS_REFEICAO: { valor: TipoRefeicao; label: string; pedidoAte: number }[] = [
@@ -101,7 +100,6 @@ interface Props {
 }
 
 export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes, usuarioLogado }: Props) {
-  const router = useRouter()
   const [etapa, setEtapa] = useState(1)
 
   // Etapa 1: quem está pedindo
@@ -219,9 +217,13 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
     setQuantidades((prev) => ({ ...prev, [tipo]: Math.max(0, valor) }))
   }
 
+  const enviandoRef = useRef(false)
+
   async function handleSubmit() {
+    if (enviandoRef.current) return
     setErro('')
     if (totalRefeicoes === 0) { setErro('Adicione pelo menos uma refeição'); return }
+    enviandoRef.current = true
     setCarregando(true)
     try {
       const itens = TIPOS_REFEICAO.filter((t) => (quantidades[t.valor] ?? 0) > 0).map((t) => ({
@@ -244,10 +246,11 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
       })
       const data = await res.json()
       if (!res.ok) { setErro(data.error || 'Erro ao criar pedido'); return }
-      router.push(`/pedidos/${data.id}`)
+      window.location.href = `/pedidos/${data.id}`
     } catch {
       setErro('Erro de conexão')
     } finally {
+      enviandoRef.current = false
       setCarregando(false)
     }
   }
@@ -286,7 +289,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
                 >
                   <div className="font-semibold text-gray-800">{r.nome}</div>
                   <div className="text-xs text-gray-400 mt-0.5">
-                    {r.fazenda.nome} · {r.turma.nome}
+                    {r.fazenda?.nome} · {r.turma?.nome}
                   </div>
                 </button>
               ))}
@@ -314,7 +317,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
               <div>
                 <p className="font-semibold text-gray-800">{requisitante?.nome ?? usuarioLogado?.nome}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {requisitante?.fazenda.nome} · {requisitante?.turma.nome}
+                  {requisitante?.fazenda?.nome} · {requisitante?.turma?.nome}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -432,7 +435,7 @@ export function FormularioPedido({ restaurantes, fazendas, turmas, requisitantes
             {requisitante && (
               <div className="bg-green-50 rounded-lg px-4 py-3 text-sm text-green-800">
                 <div className="font-medium">{requisitante.nome}</div>
-                <div className="text-xs mt-0.5 text-green-600">{requisitante.fazenda.nome} · {requisitante.turma.nome}</div>
+                <div className="text-xs mt-0.5 text-green-600">{requisitante?.fazenda?.nome} · {requisitante?.turma?.nome}</div>
               </div>
             )}
             <div>

@@ -1,23 +1,30 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
+import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
 const schema = z.object({
   requisitanteId: z.number().int().positive(),
+  pin: z.string().min(4).max(6).regex(/^\d+$/),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { requisitanteId } = schema.parse(body)
+    const { requisitanteId, pin } = schema.parse(body)
 
     const requisitante = await prisma.requisitante.findUnique({
       where: { id: requisitanteId, ativo: true, role: 'REQUISITANTE' },
     })
 
     if (!requisitante) {
-      return Response.json({ error: 'Requisitante não encontrado' }, { status: 404 })
+      return Response.json({ error: 'PIN inválido' }, { status: 401 })
+    }
+
+    const pinValido = await bcrypt.compare(pin, requisitante.pinHash)
+    if (!pinValido) {
+      return Response.json({ error: 'PIN inválido' }, { status: 401 })
     }
 
     const session = await getSession()

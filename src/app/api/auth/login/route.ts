@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     const requisitante = await prisma.requisitante.findUnique({
       where: { login },
-      include: { fazenda: true, turma: true },
+      include: { fazenda: true, turma: true, contratos: { where: { ativo: true }, select: { id: true } } },
     })
 
     if (!requisitante || !requisitante.ativo) {
@@ -32,10 +32,11 @@ export async function POST(request: NextRequest) {
     const session = await getSession()
     session.id = requisitante.id
     session.nome = requisitante.nome
-    session.role = requisitante.role as 'ADMIN' | 'REQUISITANTE' | 'RESTAURANTE'
+    session.role = requisitante.role as 'ADMIN' | 'GESTOR' | 'REQUISITANTE' | 'RESTAURANTE'
     session.fazendaId = requisitante.fazendaId
     session.turmaId = requisitante.turmaId
     session.restauranteId = requisitante.restauranteId ?? null
+    session.contratoIds = requisitante.contratos.map((c) => c.id)
     await session.save()
 
     return Response.json({
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
       fazendaId: requisitante.fazendaId,
       turmaId: requisitante.turmaId,
       restauranteId: requisitante.restauranteId ?? null,
+      contratoIds: session.contratoIds,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

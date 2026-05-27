@@ -12,7 +12,14 @@ export default async function RestaurantePage() {
 
   const restaurante = await prisma.restaurante.findUnique({
     where: { id: session.restauranteId },
-    select: { id: true, nome: true, linkGrupoWhatsApp: true, precoCafeManha: true, precoAlmoco: true, precoJantar: true },
+    select: {
+      id: true,
+      nome: true,
+      linkGrupoWhatsApp: true,
+      precosContrato: {
+        include: { contrato: { select: { id: true, nome: true } } },
+      },
+    },
   })
 
   if (!restaurante) redirect('/login')
@@ -31,7 +38,7 @@ export default async function RestaurantePage() {
     include: {
       fazenda: { select: { nome: true } },
       turma: { select: { nome: true } },
-      requisitante: { select: { nome: true } },
+      requisitante: { select: { nome: true, contratos: { select: { id: true } } } },
       versoes: {
         orderBy: { numero: 'desc' },
         take: 1,

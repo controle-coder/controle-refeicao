@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth'
 export default async function Home() {
   const session = await getSession()
   if (!session.id) redirect('/identificar')
-  if (session.role === 'ADMIN') redirect('/admin')
+  if (session.role === 'RESTAURANTE') redirect('/restaurante')
+  if (session.role === 'ADMIN') redirect('/escolha')
   redirect('/pedidos')
 }

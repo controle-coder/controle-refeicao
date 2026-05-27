@@ -37,28 +37,44 @@ interface Contrato {
 }
 interface Requisitante { id: number; nome: string; fazendaId?: number | null; turmaId?: number | null }
 
+interface PrecoContrato {
+  id: number
+  contratoId: number
+  restauranteId: number
+  precoCafeManha: number | null
+  precoAlmoco: number | null
+  precoJantar: number | null
+}
 interface ItemRefeicao { tipoRefeicao: string; quantidade: number; observacao?: string | null }
 interface Versao { itens: ItemRefeicao[] }
 interface Pedido {
   id: number
   dataRefeicao: string
   status: string
-  restaurante: { nome: string; precoCafeManha?: number | null; precoAlmoco?: number | null; precoJantar?: number | null }
+  restaurante: { id: number; nome: string }
   fazenda: { nome: string } | null
   turma: { nome: string } | null
-  requisitante: { nome: string } | null
+  requisitante: { nome: string; contratos: { id: number; nome: string; numero?: string | null; precosContrato: PrecoContrato[] }[] } | null
   nomeVisitante?: string | null
   sobrenomeVisitante?: string | null
   versoes: Versao[]
 }
 
 function precoDoItem(pedido: Pedido, tipo: string): number | null {
-  const mapa: Record<string, number | null | undefined> = {
-    CAFE_MANHA: pedido.restaurante.precoCafeManha,
-    ALMOCO: pedido.restaurante.precoAlmoco,
-    JANTAR: pedido.restaurante.precoJantar,
+  // Buscar preço do contrato+restaurante
+  const contratos = pedido.requisitante?.contratos ?? []
+  for (const contrato of contratos) {
+    const pc = contrato.precosContrato.find((p) => p.restauranteId === pedido.restaurante.id)
+    if (pc) {
+      const mapa: Record<string, number | null | undefined> = {
+        CAFE_MANHA: pc.precoCafeManha,
+        ALMOCO: pc.precoAlmoco,
+        JANTAR: pc.precoJantar,
+      }
+      return mapa[tipo] ?? null
+    }
   }
-  return mapa[tipo] ?? null
+  return null
 }
 
 function calcularValor(pedido: Pedido): number {
@@ -69,7 +85,7 @@ function calcularValor(pedido: Pedido): number {
 }
 
 function fmtReal(v: number) {
-  return `R$ ${v.toFixed(2).replace('.', ',')}`
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 function fmtData(iso: string) {
@@ -92,8 +108,12 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas, contratos, re
   const [filtroTurmaId,       setFiltroTurmaId]       = useState<number>(0)
   const [filtroSolicitanteId, setFiltroSolicitanteId] = useState<number>(0)
   const [filtroRestauranteId, setFiltroRestauranteId] = useState<number>(0)
+  const [deText, setDeText] = useState('')
+  const [ateText, setAteText] = useState('')
   const [de, setDe] = useState('')
   const [ate, setAte] = useState('')
+  const [erroDe, setErroDe] = useState('')
+  const [erroAte, setErroAte] = useState('')
   const [dados, setDados] = useState<Pedido[]>([])
   const [carregando, setCarregando] = useState(false)
   const [modo, setModo] = useState<Modo>('refeicoes')
@@ -150,6 +170,48 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas, contratos, re
 
   function handleTurmaChange(id: number) {
     setFiltroTurmaId(id)
+  }
+
+  function formatarEntradaData(raw: string): string {
+    const digits = raw.replace(/\D/g, '').slice(0, 8)
+    if (digits.length <= 2) return digits
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+  }
+
+  function parseBRDate(str: string): string | null {
+    const m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+    if (!m) return null
+    const d = +m[1], mo = +m[2], y = +m[3]
+    const date = new Date(y, mo - 1, d)
+    if (date.getFullYear() !== y || date.getMonth() + 1 !== mo || date.getDate() !== d) return null
+    return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+  }
+
+  function handleDeChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const formatted = formatarEntradaData(e.target.value)
+    setDeText(formatted)
+    if (!formatted) { setErroDe(''); setDe(''); return }
+    if (formatted.length === 10) {
+      const iso = parseBRDate(formatted)
+      if (!iso) { setErroDe('Data inválida'); setDe('') }
+      else { setErroDe(''); setDe(iso) }
+    } else {
+      setErroDe(''); setDe('')
+    }
+  }
+
+  function handleAteChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const formatted = formatarEntradaData(e.target.value)
+    setAteText(formatted)
+    if (!formatted) { setErroAte(''); setAte(''); return }
+    if (formatted.length === 10) {
+      const iso = parseBRDate(formatted)
+      if (!iso) { setErroAte('Data inválida'); setAte('') }
+      else { setErroAte(''); setAte(iso) }
+    } else {
+      setErroAte(''); setAte('')
+    }
   }
 
   // ── Buscar ────────────────────────────────────────────────────────────────
@@ -221,11 +283,34 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas, contratos, re
       Valor: parseFloat(v.valor.toFixed(2)),
     }))
 
+  // ── Gráfico por contrato ──────────────────────────────────────────────────
+
+  const porContrato: Record<string, { qtd: number; valor: number }> = {}
+  ativos.forEach((p) => {
+    const contratos = p.requisitante?.contratos ?? []
+    const chave = contratos.length > 0
+      ? (contratos[0].numero ? `${contratos[0].numero} – ${contratos[0].nome}` : contratos[0].nome)
+      : 'Sem contrato'
+    if (!porContrato[chave]) porContrato[chave] = { qtd: 0, valor: 0 }
+    p.versoes[0]?.itens.forEach((i) => {
+      porContrato[chave].qtd += i.quantidade
+      const pr = precoDoItem(p, i.tipoRefeicao)
+      if (pr != null) porContrato[chave].valor += pr * i.quantidade
+    })
+  })
+  const graficoContrato = Object.entries(porContrato)
+    .sort(([, a], [, b]) => b.qtd - a.qtd)
+    .map(([nome, v]) => ({
+      nome,
+      Quantidade: v.qtd,
+      Valor: parseFloat(v.valor.toFixed(2)),
+    }))
+
   // ── CSV ───────────────────────────────────────────────────────────────────
 
   function exportarCSV() {
     const cabecalho = ['#', 'Data Refeição', 'Restaurante', 'Fazenda', 'Turma', 'Requisitante', 'Tipo', 'Qtd', 'Preço Unit.', 'Subtotal', 'Status', 'Colaboradores'].join(';')
-    const linhas = dados.flatMap((p) =>
+    const linhas = ativos.flatMap((p) =>
       (p.versoes[0]?.itens ?? []).map((i) => {
         const pr = precoDoItem(p, i.tipoRefeicao)
         return [
@@ -342,28 +427,36 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas, contratos, re
           <div>
             <label className={labelCls}>Data início</label>
             <input
-              type="date"
-              value={de}
-              onChange={(e) => setDe(e.target.value)}
-              className={selectCls}
+              type="text"
+              inputMode="numeric"
+              placeholder="dd/mm/aaaa"
+              value={deText}
+              onChange={handleDeChange}
+              maxLength={10}
+              className={`${selectCls} ${erroDe ? 'border-red-400 focus:ring-red-400' : ''}`}
             />
+            {erroDe && <p className="text-xs text-red-500 mt-1">{erroDe}</p>}
           </div>
 
           <div>
             <label className={labelCls}>Data fim</label>
             <input
-              type="date"
-              value={ate}
-              onChange={(e) => setAte(e.target.value)}
-              className={selectCls}
+              type="text"
+              inputMode="numeric"
+              placeholder="dd/mm/aaaa"
+              value={ateText}
+              onChange={handleAteChange}
+              maxLength={10}
+              className={`${selectCls} ${erroAte ? 'border-red-400 focus:ring-red-400' : ''}`}
             />
+            {erroAte && <p className="text-xs text-red-500 mt-1">{erroAte}</p>}
           </div>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
           <button
             onClick={buscar}
-            disabled={carregando}
+            disabled={carregando || !!erroDe || !!erroAte}
             className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:bg-green-400 text-sm font-semibold transition-colors"
           >
             {carregando ? 'Buscando...' : 'Buscar'}
@@ -425,7 +518,7 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas, contratos, re
 
       {/* Gráficos */}
       {dados.length > 0 && (
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl border shadow-sm p-4">
             <h3 className="text-sm font-semibold text-gray-700 mb-4">
               {modo === 'refeicoes' ? 'Quantidade por tipo' : 'Valor por tipo'}
@@ -464,6 +557,30 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas, contratos, re
             ) : (
               <div className="h-[180px] flex items-center justify-center text-xs text-gray-400">
                 Selecione um período maior para ver a evolução diária
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl border shadow-sm p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">
+              {modo === 'refeicoes' ? 'Quantidade por contrato' : 'Valor por contrato'}
+            </h3>
+            {graficoContrato.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={graficoContrato} barSize={40}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="nome" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    formatter={(v) => [modo === 'financeiro' ? fmtReal(Number(v)) : v, dataKey]}
+                    contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+                  />
+                  <Bar dataKey={dataKey} fill="#7c3aed" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[180px] flex items-center justify-center text-xs text-gray-400">
+                Nenhum dado disponível
               </div>
             )}
           </div>
@@ -533,6 +650,7 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas, contratos, re
           <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs text-gray-400">
             <span className="bg-gray-100 px-3 py-1 rounded-full">Refeições por tipo</span>
             <span className="bg-gray-100 px-3 py-1 rounded-full">Evolução diária</span>
+            <span className="bg-gray-100 px-3 py-1 rounded-full">Por contrato</span>
             <span className="bg-gray-100 px-3 py-1 rounded-full">Valores financeiros</span>
             <span className="bg-gray-100 px-3 py-1 rounded-full">Exportar CSV</span>
           </div>

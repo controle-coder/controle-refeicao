@@ -8,6 +8,7 @@ const schema = z.object({
   nome: z.string().min(1).optional(),
   pin: z.string().min(4).max(6).regex(/^\d+$/).optional(),
   ativo: z.boolean().optional(),
+  restauranteId: z.number().int().positive().optional(),
 })
 
 export async function PUT(request: NextRequest, ctx: RouteContext<'/api/usuarios-restaurante/[id]'>) {
@@ -21,8 +22,9 @@ export async function PUT(request: NextRequest, ctx: RouteContext<'/api/usuarios
     if (data.nome) updateData.nome = data.nome
     if (data.pin) updateData.pinHash = await bcrypt.hash(data.pin, 10)
     if (data.ativo !== undefined) updateData.ativo = data.ativo
+    if (data.restauranteId !== undefined) updateData.restauranteId = data.restauranteId
 
-    const usuario = await prisma.requisitante.update({
+    const { pinHash: _, ...usuario } = await prisma.requisitante.update({
       where: { id: Number(id) },
       data: updateData,
       include: { restaurante: { select: { id: true, nome: true } } },

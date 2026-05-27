@@ -16,7 +16,11 @@ export async function GET() {
     await requireAdmin()
     const usuarios = await prisma.requisitante.findMany({
       where: { role: 'RESTAURANTE' },
-      include: { restaurante: { select: { id: true, nome: true } } },
+      select: {
+        id: true, nome: true, login: true, role: true,
+        ativo: true, criadoEm: true, restauranteId: true,
+        restaurante: { select: { id: true, nome: true } },
+      },
       orderBy: { nome: 'asc' },
     })
     return Response.json(usuarios)
@@ -42,7 +46,11 @@ export async function POST(request: NextRequest) {
         role: 'RESTAURANTE',
         restauranteId: data.restauranteId,
       },
-      include: { restaurante: { select: { id: true, nome: true } } },
+      select: {
+        id: true, nome: true, login: true, role: true,
+        ativo: true, criadoEm: true, restauranteId: true,
+        restaurante: { select: { id: true, nome: true } },
+      },
     })
 
     return Response.json(usuario, { status: 201 })

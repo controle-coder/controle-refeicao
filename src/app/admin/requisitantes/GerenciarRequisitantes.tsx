@@ -59,7 +59,8 @@ export function GerenciarRequisitantes({
   }
 
   async function salvar() {
-    if (!form.nome.trim() || !form.login.trim() || (!editando && !form.pin) || !form.fazendaId || !form.turmaId) {
+    const precisaFazendaTurma = form.role === 'REQUISITANTE'
+    if (!form.nome.trim() || !form.login.trim() || (!editando && !form.pin) || (precisaFazendaTurma && (!form.fazendaId || !form.turmaId))) {
       setErro('Preencha todos os campos obrigatórios')
       return
     }
@@ -138,8 +139,12 @@ export function GerenciarRequisitantes({
                   )}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${item.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-600'}`}>
-                    {item.role === 'ADMIN' ? 'Admin' : 'Requisitante'}
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    item.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' :
+                    item.role === 'GESTOR' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {item.role === 'ADMIN' ? 'Admin' : item.role === 'GESTOR' ? 'Gestor' : 'Requisitante'}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-center">
@@ -177,6 +182,7 @@ export function GerenciarRequisitantes({
             <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
               <option value="REQUISITANTE">Requisitante</option>
+              <option value="GESTOR">Gestor (somente leitura)</option>
               <option value="ADMIN">Administrador</option>
             </select>
             <select value={form.fazendaId} onChange={(e) => setForm((p) => ({ ...p, fazendaId: Number(e.target.value), turmaId: 0 }))}

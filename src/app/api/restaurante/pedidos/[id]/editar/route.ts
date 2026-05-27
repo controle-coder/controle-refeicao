@@ -53,6 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           pedidoId: pedido.id,
           numero: novoNumero,
           observacao: obsComAutor,
+          criadoPorId: session.id,
           itens: {
             create: itensFiltrados.map((i) => ({
               tipoRefeicao: i.tipoRefeicao,
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       include: {
         fazenda: { select: { nome: true } },
         turma: { select: { nome: true } },
-        requisitante: { select: { nome: true } },
+        requisitante: { select: { nome: true, contratos: { select: { id: true } } } },
         versoes: {
           orderBy: { numero: 'desc' },
           take: 1,

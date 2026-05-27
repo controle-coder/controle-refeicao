@@ -12,6 +12,15 @@ const sessionOptions = {
   },
 }
 
+function addSecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  return response
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -25,7 +34,7 @@ export async function proxy(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/identificar'
   ) {
-    return NextResponse.next()
+    return addSecurityHeaders(NextResponse.next())
   }
 
   const response = NextResponse.next()
@@ -36,7 +45,7 @@ export async function proxy(request: NextRequest) {
     if (!session.id || (session.role !== 'REQUISITANTE' && session.role !== 'ADMIN')) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
-    return response
+    return addSecurityHeaders(response)
   }
 
   // Área do restaurante: role RESTAURANTE
@@ -44,7 +53,15 @@ export async function proxy(request: NextRequest) {
     if (!session.id || session.role !== 'RESTAURANTE') {
       return NextResponse.redirect(new URL('/login', request.url))
     }
-    return response
+    return addSecurityHeaders(response)
+  }
+
+  // Área do gestor: role GESTOR (somente leitura)
+  if (pathname.startsWith('/gestor') || pathname.startsWith('/api/relatorios')) {
+    if (!session.id || (session.role !== 'GESTOR' && session.role !== 'ADMIN')) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    return addSecurityHeaders(response)
   }
 
   // Admin: role ADMIN
@@ -52,7 +69,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  return response
+  return addSecurityHeaders(response)
 }
 
 export const config = {

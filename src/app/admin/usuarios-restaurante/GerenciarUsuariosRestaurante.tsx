@@ -56,7 +56,7 @@ export function GerenciarUsuariosRestaurante({
     setCarregando(true)
     try {
       if (editando) {
-        const body: Record<string, unknown> = { nome: form.nome }
+        const body: Record<string, unknown> = { nome: form.nome, restauranteId: form.restauranteId }
         if (form.pin.length >= 4) body.pin = form.pin
         const res = await fetch(`/api/usuarios-restaurante/${editando.id}`, {
           method: 'PUT',
@@ -153,8 +153,7 @@ export function GerenciarUsuariosRestaurante({
               <select
                 value={form.restauranteId}
                 onChange={(e) => setForm((p) => ({ ...p, restauranteId: Number(e.target.value) }))}
-                disabled={!!editando}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-50"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value={0}>Selecione...</option>
                 {restaurantes.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}

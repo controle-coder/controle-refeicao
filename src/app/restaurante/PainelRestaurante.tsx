@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 const TIPO_LABELS: Record<string, string> = {
   CAFE_MANHA: 'Café da Manhã',
@@ -437,10 +437,14 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
     setModalAvulso(true)
   }
 
+  const enviandoAvulsoRef = useRef(false)
+
   async function salvarAvulso() {
+    if (enviandoAvulsoRef.current) return
     if (!avulsoNome.trim()) { setErroAvulso('Informe o nome'); return }
     if (!avulsoSobrenome.trim()) { setErroAvulso('Informe o sobrenome'); return }
     if (!TIPOS.some((t) => avulsoQtds[t] > 0)) { setErroAvulso('Informe pelo menos uma refeição'); return }
+    enviandoAvulsoRef.current = true
     setCarregandoAvulso(true)
     setErroAvulso('')
     try {
@@ -463,6 +467,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
     } catch {
       setErroAvulso('Erro de conexão')
     } finally {
+      enviandoAvulsoRef.current = false
       setCarregandoAvulso(false)
     }
   }

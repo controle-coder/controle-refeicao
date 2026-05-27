@@ -1,12 +1,25 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin, authError } from '@/lib/auth'
+import { requireAuth, authError, getGestorScope } from '@/lib/auth'
 
 const INCLUDE_PEDIDO = {
   restaurante: true,
   fazenda: true,
   turma: true,
-  requisitante: { select: { id: true, nome: true } },
+  requisitante: {
+    select: {
+      id: true,
+      nome: true,
+      contratos: {
+        select: {
+          id: true,
+          nome: true,
+          numero: true,
+          precosContrato: true,
+        },
+      },
+    },
+  },
   versoes: {
     orderBy: { numero: 'desc' } as const,
     take: 1,
@@ -16,7 +29,8 @@ const INCLUDE_PEDIDO = {
 
 export async function GET(request: NextRequest, ctx: RouteContext<'/api/relatorios/[tipo]'>) {
   try {
-    await requireAdmin()
+    const session = await requireAuth()
+    if (session.role !== 'ADMIN' && session.role !== 'GESTOR') return authError('FORBIDDEN')
     const { tipo } = await ctx.params
 
     if (!['restaurante', 'fazenda', 'turma'].includes(tipo)) {
@@ -41,7 +55,7 @@ export async function GET(request: NextRequest, ctx: RouteContext<'/api/relatori
     const requisitanteId = searchParams.get('requisitanteId')
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = { ...dateFilter }
+    const where: any = { ...dateFilter, status: { not: 'CANCELADO' } }
     if (fazendaId)      where.fazendaId     = Number(fazendaId)
     if (turmaId)        where.turmaId       = Number(turmaId)
     if (restauranteId)  where.restauranteId = Number(restauranteId)
@@ -49,6 +63,17 @@ export async function GET(request: NextRequest, ctx: RouteContext<'/api/relatori
     if (contratoId)     where.requisitante  = {
       ...(where.requisitante ?? {}),
       contratos: { some: { id: Number(contratoId) } },
+    }
+
+    // Gestor: restringe aos pedidos vinculados ao(s) contrato(s) dele
+    if (session.role === 'GESTOR') {
+      const scope = await getGestorScope(session.contratoIds ?? [])
+      where.OR = [
+        { restauranteId: { in: scope.restauranteIds } },
+        { fazendaId: { in: scope.fazendaIds } },
+        { turmaId: { in: scope.turmaIds } },
+        { requisitanteId: { in: scope.requisitanteIds } },
+      ]
     }
 
     const pedidos = await prisma.pedido.findMany({

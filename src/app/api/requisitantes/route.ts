@@ -8,9 +8,9 @@ const schema = z.object({
   nome: z.string().min(1),
   login: z.string().min(1),
   pin: z.string().min(4).max(6).regex(/^\d+$/, 'PIN deve conter apenas dígitos'),
-  role: z.enum(['ADMIN', 'REQUISITANTE']).default('REQUISITANTE'),
-  fazendaId: z.number().int().positive(),
-  turmaId: z.number().int().positive(),
+  role: z.enum(['ADMIN', 'GESTOR', 'REQUISITANTE']).default('REQUISITANTE'),
+  fazendaId: z.number().int().positive().optional(),
+  turmaId: z.number().int().positive().optional(),
   contratoIds: z.array(z.number().int().positive()).optional(),
 })
 
@@ -26,10 +26,14 @@ export async function GET(request: NextRequest) {
         ...(fazendaId ? { fazendaId: Number(fazendaId) } : {}),
         ...(turmaId ? { turmaId: Number(turmaId) } : {}),
       },
-      include: { fazenda: true, turma: true, contratos: true },
+      select: {
+        id: true, nome: true, login: true, role: true,
+        fazendaId: true, turmaId: true, ativo: true, criadoEm: true,
+        fazenda: true, turma: true, contratos: true,
+      },
       orderBy: { nome: 'asc' },
     })
-    return Response.json(items.map((r) => ({ ...r, pinHash: undefined })))
+    return Response.json(items)
   } catch (e: any) {
     return authError(e.message)
   }

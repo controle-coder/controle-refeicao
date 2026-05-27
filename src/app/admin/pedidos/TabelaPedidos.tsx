@@ -67,11 +67,12 @@ interface Props {
   pedidos: Pedido[]
   adminId: number
   adminNome: string
+  readonly?: boolean
 }
 
 type Modal = 'detalhe' | 'cancelar' | 'editar'
 
-export function TabelaPedidos({ pedidos, adminId, adminNome }: Props) {
+export function TabelaPedidos({ pedidos, adminId, adminNome, readonly = false }: Props) {
   const [lista, setLista] = useState<Pedido[]>(pedidos)
   const [selecionado, setSelecionado] = useState<Pedido | null>(null)
   const [modal, setModal] = useState<Modal>('detalhe')
@@ -377,7 +378,7 @@ export function TabelaPedidos({ pedidos, adminId, adminNome }: Props) {
               <button onClick={fechar} className="flex-1 border border-gray-200 text-gray-600 py-2 rounded-lg hover:bg-gray-50 text-sm">
                 Fechar
               </button>
-              {selecionado.status !== 'CANCELADO' && (
+              {!readonly && selecionado.status !== 'CANCELADO' && (
                 <>
                   <button
                     onClick={abrirEditar}

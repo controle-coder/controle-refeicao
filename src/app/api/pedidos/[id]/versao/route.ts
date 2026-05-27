@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { criarNovaVersao } from '@/lib/versioning'
+import { requireAuth, authError } from '@/lib/auth'
 import { z } from 'zod'
 import { TipoRefeicao } from '@/generated/prisma/enums'
 
@@ -11,7 +12,6 @@ const itemSchema = z.object({
 })
 
 const schema = z.object({
-  usuarioId: z.number().int().positive(),
   itens: z.array(itemSchema).min(1),
   observacao: z.string().optional(),
   dataRefeicao: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida').optional(),
@@ -19,6 +19,8 @@ const schema = z.object({
 
 export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos/[id]/versao'>) {
   try {
+    const session = await requireAuth()
+
     const { id } = await ctx.params
     const body = await request.json()
     const data = schema.parse(body)
@@ -28,6 +30,19 @@ export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos
       include: { versoes: { orderBy: { numero: 'desc' }, take: 1, include: { itens: true } } },
     })
     if (!pedido) return Response.json({ error: 'Não encontrado' }, { status: 404 })
+
+    // GESTOR não pode editar pedidos
+    if (session.role === 'GESTOR') return authError('FORBIDDEN')
+
+    // REQUISITANTE só pode editar o próprio pedido
+    if (session.role === 'REQUISITANTE' && pedido.requisitanteId !== session.id) {
+      return authError('FORBIDDEN')
+    }
+
+    // RESTAURANTE só pode editar pedidos do seu restaurante
+    if (session.role === 'RESTAURANTE' && pedido.restauranteId !== session.restauranteId) {
+      return authError('FORBIDDEN')
+    }
 
     const agora = new Date()
     const ref = new Date(pedido.dataRefeicao)
@@ -61,7 +76,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos
 
     await criarNovaVersao({
       pedidoId: Number(id),
-      usuarioId: data.usuarioId,
+      usuarioId: session.id,
       itens: itensMesclados,
       observacao: data.observacao,
     })
@@ -95,6 +110,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<'/api/pedidos
 
     return Response.json(pedidoAtualizado)
   } catch (e: any) {
+    if (e.message === 'UNAUTHORIZED' || e.message === 'FORBIDDEN') return authError(e.message)
     if (e instanceof z.ZodError) return Response.json({ error: e.issues }, { status: 400 })
     if (e.message?.includes('cancelado')) return Response.json({ error: e.message }, { status: 400 })
     return Response.json({ error: 'Erro interno' }, { status: 500 })

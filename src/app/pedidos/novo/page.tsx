@@ -7,7 +7,7 @@ import { FormularioPedido } from '@/components/pedido/FormularioPedido'
 
 export default async function NovoPedidoPage() {
   const session = await getSession()
-  if (!session.id || session.role !== 'REQUISITANTE') {
+  if (!session.id || (session.role !== 'REQUISITANTE' && session.role !== 'ADMIN')) {
     redirect('/login')
   }
 
@@ -33,6 +33,9 @@ export default async function NovoPedidoPage() {
 
   if (!req) redirect('/login')
 
+  const requisitantes = [req]
+  const usuarioLogado = { id: req.id, nome: req.nome, fazendaId: req.fazendaId, turmaId: req.turmaId }
+
   const pageKey = Date.now()
 
   return (
@@ -43,8 +46,8 @@ export default async function NovoPedidoPage() {
         restaurantes={restaurantes}
         fazendas={fazendas}
         turmas={turmas as any}
-        requisitantes={[req] as any}
-        usuarioLogado={{ id: req.id, nome: req.nome, fazendaId: req.fazendaId, turmaId: req.turmaId }}
+        requisitantes={requisitantes as any}
+        usuarioLogado={usuarioLogado}
       />
     </div>
   )

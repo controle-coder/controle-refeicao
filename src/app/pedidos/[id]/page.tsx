@@ -9,7 +9,7 @@ export default async function DetalhePedidoPage({
   params: Promise<{ id: string }>
 }) {
   const session = await getSession()
-  if (!session.id || session.role !== 'REQUISITANTE') {
+  if (!session.id || (session.role !== 'REQUISITANTE' && session.role !== 'ADMIN')) {
     redirect('/login')
   }
 
@@ -34,12 +34,12 @@ export default async function DetalhePedidoPage({
 
   if (!pedido) notFound()
 
-  // Solicitante só pode ver os próprios pedidos
-  if (pedido.requisitanteId !== session.id) notFound()
+  // Requisitante só pode ver os próprios pedidos; admin vê qualquer um
+  if (session.role === 'REQUISITANTE' && pedido.requisitanteId !== session.id) notFound()
 
   return (
     <div className="mt-2">
-      <DetalhePedido pedido={pedido as any} sessaoId={session.id} sessaoRole="REQUISITANTE" />
+      <DetalhePedido pedido={pedido as any} sessaoId={session.id} sessaoRole={session.role} />
     </div>
   )
 }

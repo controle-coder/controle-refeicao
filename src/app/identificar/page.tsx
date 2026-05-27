@@ -12,6 +12,7 @@ interface Requisitante {
 export default function IdentificarPage() {
   const [requisitantes, setRequisitantes] = useState<Requisitante[]>([])
   const [selecionado, setSelecionado] = useState<number>(0)
+  const [pin, setPin] = useState('')
   const [carregandoLista, setCarregandoLista] = useState(true)
   const [entrando, setEntrando] = useState(false)
   const [erro, setErro] = useState('')
@@ -25,17 +26,18 @@ export default function IdentificarPage() {
   }, [])
 
   async function handleEntrar() {
-    if (!selecionado) return
+    if (!selecionado || pin.length < 4) return
     setEntrando(true)
     setErro('')
     try {
       const res = await fetch('/api/auth/identificar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requisitanteId: selecionado }),
+        body: JSON.stringify({ requisitanteId: selecionado, pin }),
       })
       if (!res.ok) {
-        setErro('Erro ao identificar')
+        const body = await res.json()
+        setErro(body.error ?? 'Erro ao identificar')
         setEntrando(false)
         return
       }
@@ -51,6 +53,12 @@ export default function IdentificarPage() {
   )
 
   const pessoa = requisitantes.find((r) => r.id === selecionado)
+
+  function handleSelecionado(id: number) {
+    setSelecionado(id)
+    setPin('')
+    setErro('')
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-green-50 px-4 py-8">
@@ -93,7 +101,7 @@ export default function IdentificarPage() {
                   return (
                     <button
                       key={r.id}
-                      onClick={() => setSelecionado(r.id)}
+                      onClick={() => handleSelecionado(r.id)}
                       className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all active:scale-[0.98] ${
                         ativo
                           ? 'border-green-500 bg-green-50 shadow-sm'
@@ -111,11 +119,29 @@ export default function IdentificarPage() {
               )}
             </div>
 
+            {selecionado > 0 && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                  PIN de {pessoa?.nome.split(' ')[0]}
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  placeholder="••••"
+                  value={pin}
+                  onChange={(e) => { setPin(e.target.value.replace(/\D/g, '').slice(0, 6)); setErro('') }}
+                  maxLength={6}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-green-500"
+                  autoFocus
+                />
+              </div>
+            )}
+
             {erro && <p className="text-red-600 text-sm text-center">{erro}</p>}
 
             <button
               onClick={handleEntrar}
-              disabled={!selecionado || entrando}
+              disabled={!selecionado || pin.length < 4 || entrando}
               className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-3 rounded-xl transition-all active:scale-[0.98] text-base mt-1"
             >
               {entrando ? (

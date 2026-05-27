@@ -8,7 +8,7 @@ const schema = z.object({
   nome: z.string().min(1).optional(),
   login: z.string().min(1).optional(),
   pin: z.string().min(4).max(6).regex(/^\d+$/).optional(),
-  role: z.enum(['ADMIN', 'REQUISITANTE']).optional(),
+  role: z.enum(['ADMIN', 'GESTOR', 'REQUISITANTE']).optional(),
   fazendaId: z.number().int().positive().optional(),
   turmaId: z.number().int().positive().optional(),
   contratoIds: z.array(z.number().int().positive()).optional(),

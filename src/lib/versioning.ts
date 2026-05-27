@@ -28,6 +28,24 @@ export interface CriarNovaVersaoInput {
 
 export async function criarPedido(input: CriarPedidoInput) {
   return prisma.$transaction(async (tx) => {
+    // Verificação de duplicata: mesmo requisitante/visitante, restaurante e data nos últimos 2 min
+    const janela = new Date(Date.now() - 2 * 60 * 1000)
+    const duplicateWhere: Record<string, unknown> = {
+      restauranteId: input.restauranteId,
+      dataRefeicao: input.dataRefeicao,
+      criadoEm: { gte: janela },
+    }
+    if (input.requisitanteId) {
+      duplicateWhere.requisitanteId = input.requisitanteId
+    } else {
+      duplicateWhere.nomeVisitante = input.nomeVisitante
+      duplicateWhere.sobrenomeVisitante = input.sobrenomeVisitante
+    }
+    const existente = await tx.pedido.findFirst({ where: duplicateWhere })
+    if (existente) {
+      throw new Error('PEDIDO_DUPLICADO')
+    }
+
     const pedido = await tx.pedido.create({
       data: {
         restauranteId: input.restauranteId,

@@ -10,6 +10,7 @@ export default async function ContratosPage() {
         fazendas: { select: { id: true, nome: true }, orderBy: { nome: 'asc' } },
         restaurantes: { select: { id: true, nome: true }, orderBy: { nome: 'asc' } },
         turmas: { select: { id: true, nome: true, fazendaId: true }, orderBy: { nome: 'asc' } },
+        precosContrato: true,
       },
     }),
     prisma.fazenda.findMany({ where: { ativo: true }, orderBy: { nome: 'asc' } }),

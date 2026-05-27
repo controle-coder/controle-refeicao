@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 const TIPOS_REFEICAO = [
   { valor: 'CAFE_MANHA', label: 'Café da Manhã' },
@@ -37,9 +37,13 @@ export function FormularioVisitante({ restaurantes }: Props) {
   const totalRefeicoes = Object.values(quantidades).reduce((s, v) => s + v, 0)
   const restauranteSelecionado = restaurantes.find((r) => r.id === restauranteId)
 
+  const enviandoRef = useRef(false)
+
   async function handleSubmit() {
+    if (enviandoRef.current) return
     setErro('')
     if (totalRefeicoes === 0) { setErro('Adicione pelo menos uma refeição'); return }
+    enviandoRef.current = true
     setCarregando(true)
     try {
       const itens = TIPOS_REFEICAO
@@ -63,6 +67,7 @@ export function FormularioVisitante({ restaurantes }: Props) {
     } catch {
       setErro('Erro de conexão')
     } finally {
+      enviandoRef.current = false
       setCarregando(false)
     }
   }
