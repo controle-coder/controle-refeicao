@@ -10,14 +10,15 @@ const INCLUDE_PEDIDO = {
     select: {
       id: true,
       nome: true,
-      contratos: {
-        select: {
-          id: true,
-          nome: true,
-          numero: true,
-          precosContrato: true,
-        },
-      },
+    },
+  },
+  // Contrato fixado no pedido na criação — fonte do preço, imune a transferências do solicitante.
+  contrato: {
+    select: {
+      id: true,
+      nome: true,
+      numero: true,
+      precosContrato: true,
     },
   },
   versoes: {

@@ -47,6 +47,7 @@ interface PrecoContrato {
 }
 interface ItemRefeicao { tipoRefeicao: string; quantidade: number; observacao?: string | null }
 interface Versao { itens: ItemRefeicao[] }
+interface ContratoPedido { id: number; nome: string; numero?: string | null; precosContrato: PrecoContrato[] }
 interface Pedido {
   id: number
   dataRefeicao: string
@@ -54,27 +55,24 @@ interface Pedido {
   restaurante: { id: number; nome: string }
   fazenda: { nome: string } | null
   turma: { nome: string } | null
-  requisitante: { nome: string; contratos: { id: number; nome: string; numero?: string | null; precosContrato: PrecoContrato[] }[] } | null
+  requisitante: { nome: string } | null
+  // Contrato fixado no pedido na criação — fonte do preço (imune a transferências do solicitante).
+  contrato: ContratoPedido | null
   nomeVisitante?: string | null
   sobrenomeVisitante?: string | null
   versoes: Versao[]
 }
 
 function precoDoItem(pedido: Pedido, tipo: string): number | null {
-  // Buscar preço do contrato+restaurante
-  const contratos = pedido.requisitante?.contratos ?? []
-  for (const contrato of contratos) {
-    const pc = contrato.precosContrato.find((p) => p.restauranteId === pedido.restaurante.id)
-    if (pc) {
-      const mapa: Record<string, number | null | undefined> = {
-        CAFE_MANHA: pc.precoCafeManha,
-        ALMOCO: pc.precoAlmoco,
-        JANTAR: pc.precoJantar,
-      }
-      return mapa[tipo] ?? null
-    }
+  // Preço vem do contrato gravado no pedido (Pedido.contratoId), não dos contratos atuais do solicitante.
+  const pc = pedido.contrato?.precosContrato.find((p) => p.restauranteId === pedido.restaurante.id)
+  if (!pc) return null
+  const mapa: Record<string, number | null | undefined> = {
+    CAFE_MANHA: pc.precoCafeManha,
+    ALMOCO: pc.precoAlmoco,
+    JANTAR: pc.precoJantar,
   }
-  return null
+  return mapa[tipo] ?? null
 }
 
 function calcularValor(pedido: Pedido): number {
@@ -287,9 +285,8 @@ export function RelatorioCliente({ restaurantes, fazendas, turmas, contratos, re
 
   const porContrato: Record<string, { qtd: number; valor: number }> = {}
   ativos.forEach((p) => {
-    const contratos = p.requisitante?.contratos ?? []
-    const chave = contratos.length > 0
-      ? (contratos[0].numero ? `${contratos[0].numero} – ${contratos[0].nome}` : contratos[0].nome)
+    const chave = p.contrato
+      ? (p.contrato.numero ? `${p.contrato.numero} – ${p.contrato.nome}` : p.contrato.nome)
       : 'Sem contrato'
     if (!porContrato[chave]) porContrato[chave] = { qtd: 0, valor: 0 }
     p.versoes[0]?.itens.forEach((i) => {

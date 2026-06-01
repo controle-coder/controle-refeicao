@@ -1,5 +1,40 @@
 import { prisma } from './prisma'
 import { TipoRefeicao, Status } from '@/generated/prisma/enums'
+import type { Prisma } from '@/generated/prisma/client'
+
+/**
+ * Resolve o contrato que cobre o restaurante para um requisitante, no momento da criação.
+ * O contrato fica gravado no pedido (Pedido.contratoId), tornando o valor do histórico
+ * imune a transferências futuras do solicitante entre contratos.
+ *
+ * Regras:
+ * - Visitante (sem requisitanteId) → null.
+ * - Entre os contratos do requisitante que incluem o restaurante, prefere o que tem
+ *   PrecoContrato cadastrado para ele; senão usa qualquer um que o cubra; senão null.
+ */
+export async function resolverContratoPedido(
+  tx: Prisma.TransactionClient,
+  requisitanteId: number | null | undefined,
+  restauranteId: number,
+): Promise<number | null> {
+  if (!requisitanteId) return null
+
+  const contratos = await tx.contrato.findMany({
+    where: {
+      requisitantes: { some: { id: requisitanteId } },
+      restaurantes: { some: { id: restauranteId } },
+    },
+    select: {
+      id: true,
+      precosContrato: { where: { restauranteId }, select: { id: true } },
+    },
+    orderBy: { id: 'asc' },
+  })
+
+  if (contratos.length === 0) return null
+  const comPreco = contratos.find((c) => c.precosContrato.length > 0)
+  return (comPreco ?? contratos[0]).id
+}
 
 export interface ItemInput {
   tipoRefeicao: TipoRefeicao
@@ -46,12 +81,15 @@ export async function criarPedido(input: CriarPedidoInput) {
       throw new Error('PEDIDO_DUPLICADO')
     }
 
+    const contratoId = await resolverContratoPedido(tx, input.requisitanteId, input.restauranteId)
+
     const pedido = await tx.pedido.create({
       data: {
         restauranteId: input.restauranteId,
         fazendaId: input.fazendaId ?? null,
         turmaId: input.turmaId ?? null,
         requisitanteId: input.requisitanteId ?? null,
+        contratoId,
         nomeVisitante: input.nomeVisitante ?? null,
         sobrenomeVisitante: input.sobrenomeVisitante ?? null,
         dataRefeicao: input.dataRefeicao,

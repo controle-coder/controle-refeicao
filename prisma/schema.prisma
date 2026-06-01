@@ -23,6 +23,7 @@ model Contrato {
   restaurantes   Restaurante[]
   turmas         Turma[]
   precosContrato PrecoContrato[]
+  pedidos        Pedido[]
 }
 
 model Restaurante {
@@ -122,6 +123,10 @@ model Pedido {
   turma          Turma?       @relation(fields: [turmaId], references: [id])
   requisitanteId Int?
   requisitante   Requisitante? @relation("PedidoRequisitante", fields: [requisitanteId], references: [id])
+  // Contrato vigente no momento da criação — fixa o contrato usado no cálculo do valor,
+  // imune a transferências futuras do solicitante entre contratos.
+  contratoId     Int?
+  contrato       Contrato?     @relation(fields: [contratoId], references: [id])
   // Campos para pedidos de visitantes (não cadastrados)
   nomeVisitante      String?
   sobrenomeVisitante String?

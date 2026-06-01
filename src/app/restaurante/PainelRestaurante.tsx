@@ -42,7 +42,9 @@ interface Pedido {
   atualizadoEm: string
   fazenda: { nome: string } | null
   turma: { nome: string } | null
-  requisitante: { nome: string; contratos?: { id: number }[] } | null
+  requisitante: { nome: string } | null
+  // Contrato fixado no pedido na criação — fonte do preço (imune a transferências do solicitante).
+  contratoId: number | null
   nomeVisitante?: string | null
   sobrenomeVisitante?: string | null
   versoes: { itens: Item[] }[]
@@ -324,7 +326,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
         const cols = [dataFmt, fazenda, turma, req, itensMap.CAFE_MANHA, itensMap.ALMOCO, itensMap.JANTAR, total]
 
         if (temPrecoLocal) {
-          const contratoIds = p.requisitante?.contratos?.map((c) => c.id) ?? []
+          const contratoIds = p.contratoId != null ? [p.contratoId] : []
           let valor = 0
           for (const tipo of ['CAFE_MANHA', 'ALMOCO', 'JANTAR']) {
             const preco = buscarPreco(restaurante.precosContrato, contratoIds, tipo)
@@ -489,7 +491,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
   let valorTotalDia = 0
   if (temPrecos) {
     pedidos.forEach((p) => {
-      const contratoIds = p.requisitante?.contratos?.map((c) => c.id) ?? []
+      const contratoIds = p.contratoId != null ? [p.contratoId] : []
       p.versoes[0]?.itens.forEach((i) => {
         const preco = buscarPreco(restaurante.precosContrato, contratoIds, i.tipoRefeicao)
         if (preco != null) valorTotalDia += preco * i.quantidade
@@ -741,7 +743,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
             // Subtotal financeiro do pedido (todos os itens, não só os filtrados)
             let subtotalPedido: number | null = null
             if (temPrecos) {
-              const contratoIds = pedido.requisitante?.contratos?.map((c) => c.id) ?? []
+              const contratoIds = pedido.contratoId != null ? [pedido.contratoId] : []
               subtotalPedido = 0
               ;(pedido.versoes[0]?.itens ?? []).forEach((i) => {
                 const preco = buscarPreco(restaurante.precosContrato, contratoIds, i.tipoRefeicao)

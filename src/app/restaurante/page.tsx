@@ -38,7 +38,7 @@ export default async function RestaurantePage() {
     include: {
       fazenda: { select: { nome: true } },
       turma: { select: { nome: true } },
-      requisitante: { select: { nome: true, contratos: { select: { id: true } } } },
+      requisitante: { select: { nome: true } },
       versoes: {
         orderBy: { numero: 'desc' },
         take: 1,
