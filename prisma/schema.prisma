@@ -44,14 +44,15 @@ model Restaurante {
 }
 
 model PrecoContrato {
-  id              Int         @id @default(autoincrement())
-  contratoId      Int
-  contrato        Contrato    @relation(fields: [contratoId], references: [id])
-  restauranteId   Int
-  restaurante     Restaurante @relation(fields: [restauranteId], references: [id])
-  precoCafeManha  Float?
-  precoAlmoco     Float?
-  precoJantar     Float?
+  id                Int         @id @default(autoincrement())
+  contratoId        Int
+  contrato          Contrato    @relation(fields: [contratoId], references: [id])
+  restauranteId     Int
+  restaurante       Restaurante @relation(fields: [restauranteId], references: [id])
+  precoCafeManha    Float?
+  precoAlmoco       Float?
+  precoJantar       Float?
+  linkGrupoWhatsApp String?     // link do grupo WhatsApp específico deste contrato+restaurante
 
   @@unique([contratoId, restauranteId])
 }

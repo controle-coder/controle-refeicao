@@ -8,6 +8,7 @@ const precoSchema = z.object({
   precoCafeManha: z.number().nonnegative().nullable().optional(),
   precoAlmoco: z.number().nonnegative().nullable().optional(),
   precoJantar: z.number().nonnegative().nullable().optional(),
+  linkGrupoWhatsApp: z.string().nullable().optional(),
 })
 
 const schema = z.object({
@@ -49,6 +50,7 @@ export async function PUT(request: NextRequest, ctx: RouteContext<'/api/contrato
             precoCafeManha: p.precoCafeManha ?? null,
             precoAlmoco: p.precoAlmoco ?? null,
             precoJantar: p.precoJantar ?? null,
+            linkGrupoWhatsApp: p.linkGrupoWhatsApp ?? null,
           })),
         })
       }

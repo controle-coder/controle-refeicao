@@ -65,6 +65,7 @@ interface Props {
   pedido: Pedido
   sessaoId: number | null
   sessaoRole: string
+  linkGrupoContrato?: string | null
 }
 
 function nomeAutor(pedido: Pedido): string {
@@ -72,7 +73,7 @@ function nomeAutor(pedido: Pedido): string {
   return [pedido.nomeVisitante, pedido.sobrenomeVisitante].filter(Boolean).join(' ') || 'Visitante'
 }
 
-export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
+export function DetalhePedido({ pedido, sessaoId, sessaoRole, linkGrupoContrato }: Props) {
   const [editando, setEditando] = useState(false)
   const [quantidades, setQuantidades] = useState<Record<string, number>>({})
   const [observacoes, setObservacoes] = useState<Record<string, string>>({})
@@ -196,10 +197,13 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
       itens: versaoAtual.itens,
     })
 
-    if (pedido.restaurante.linkGrupoWhatsApp) {
+    // Prioridade: link do grupo do contrato > link do grupo do restaurante > telefone direto
+    const linkGrupo = linkGrupoContrato || pedido.restaurante.linkGrupoWhatsApp
+
+    if (linkGrupo) {
       try { await navigator.clipboard.writeText(mensagem) } catch {}
       setCopiado(false)
-      setModalGrupo({ mensagem, link: pedido.restaurante.linkGrupoWhatsApp })
+      setModalGrupo({ mensagem, link: linkGrupo })
     } else {
       const link = gerarLinkWhatsApp(pedido.restaurante.telefone, mensagem)
       window.open(link, '_blank')
@@ -211,7 +215,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole }: Props) {
       body: JSON.stringify({ status: 'ENVIADO' }),
     })
 
-    if (!pedido.restaurante.linkGrupoWhatsApp) {
+    if (!linkGrupo) {
       window.location.href = window.location.href
     }
   }

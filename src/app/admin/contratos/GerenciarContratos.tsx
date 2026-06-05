@@ -11,6 +11,7 @@ interface PrecoContrato {
   precoCafeManha: number | null
   precoAlmoco: number | null
   precoJantar: number | null
+  linkGrupoWhatsApp: string | null
 }
 interface Contrato {
   id: number
@@ -31,6 +32,7 @@ interface PrecoForm {
   precoCafeManha: string
   precoAlmoco: string
   precoJantar: string
+  linkGrupoWhatsApp: string
 }
 
 interface Props {
@@ -79,6 +81,7 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
         precoCafeManha: p.precoCafeManha != null ? String(p.precoCafeManha) : '',
         precoAlmoco: p.precoAlmoco != null ? String(p.precoAlmoco) : '',
         precoJantar: p.precoJantar != null ? String(p.precoJantar) : '',
+        linkGrupoWhatsApp: p.linkGrupoWhatsApp ?? '',
       }
     }
     setPrecos(precosMap)
@@ -101,7 +104,7 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
   function setPrecoField(restId: number, field: keyof PrecoForm, value: string) {
     setPrecos((prev) => ({
       ...prev,
-      [restId]: { ...(prev[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '' }), [field]: value },
+      [restId]: { ...(prev[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '', linkGrupoWhatsApp: '' }), [field]: value },
     }))
   }
 
@@ -110,12 +113,13 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
     setCarregando(true)
     try {
       const precosArray = form.restauranteIds.map((restId) => {
-        const p = precos[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '' }
+        const p = precos[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '', linkGrupoWhatsApp: '' }
         return {
           restauranteId: restId,
           precoCafeManha: parsePreco(p.precoCafeManha),
           precoAlmoco: parsePreco(p.precoAlmoco),
           precoJantar: parsePreco(p.precoJantar),
+          linkGrupoWhatsApp: p.linkGrupoWhatsApp.trim() || null,
         }
       })
       const body = {
@@ -291,7 +295,7 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
                 <div className="border border-gray-200 rounded-lg divide-y">
                   {form.restauranteIds.map((restId) => {
                     const rest = restaurantes.find((r) => r.id === restId)
-                    const p = precos[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '' }
+                    const p = precos[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '', linkGrupoWhatsApp: '' }
                     return (
                       <div key={restId} className="px-3 py-2 space-y-1.5">
                         <p className="text-sm font-medium text-gray-700">{rest?.nome}</p>
@@ -314,6 +318,16 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
                               />
                             </div>
                           ))}
+                        </div>
+                        <div className="mt-1.5">
+                          <label className="block text-[10px] text-gray-400 mb-0.5">Link Grupo WhatsApp</label>
+                          <input
+                            type="url"
+                            placeholder="https://chat.whatsapp.com/XXXXX"
+                            value={p.linkGrupoWhatsApp}
+                            onChange={(e) => setPrecoField(restId, 'linkGrupoWhatsApp', e.target.value)}
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-500"
+                          />
                         </div>
                       </div>
                     )
