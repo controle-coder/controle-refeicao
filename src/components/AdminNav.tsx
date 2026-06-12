@@ -37,6 +37,7 @@ const sections: NavSection[] = [
     items: [
       { href: '/admin/pedidos',    label: 'Pedidos',    icon: '📋' },
       { href: '/admin/relatorios', label: 'Relatórios', icon: '📈' },
+      { href: '/admin/backup',     label: 'Backup',     icon: '💾' },
     ],
   },
 ]
