@@ -1,0 +1,40 @@
+name: Backup diário do banco
+
+on:
+  schedule:
+    # Todo dia às 03:00 UTC (00:00 horário de Brasília)
+    - cron: '0 3 * * *'
+  workflow_dispatch: # permite rodar manualmente pelo GitHub
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Instalar PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Gerar backup via pg_dump
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+          FILENAME="backup_${TIMESTAMP}.sql"
+          pg_dump "$DATABASE_URL" \
+            --no-owner \
+            --no-privileges \
+            --clean \
+            --if-exists \
+            --format=plain \
+            > "$FILENAME"
+          echo "FILENAME=$FILENAME" >> "$GITHUB_ENV"
+          echo "Backup gerado: $FILENAME ($(wc -c < "$FILENAME") bytes)"
+
+      - name: Upload backup como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-${{ env.FILENAME }}
+          path: ${{ env.FILENAME }}
+          retention-days: 30
