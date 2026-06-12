@@ -179,6 +179,26 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole, linkGrupoContrato 
     window.location.href = window.location.href
   }
 
+  async function reverterCancelamento() {
+    if (!confirm('Deseja reverter o cancelamento deste pedido?')) return
+    setCarregando(true)
+    try {
+      const res = await fetch(`/api/pedidos/${pedido.id}/reverter-cancelamento`, {
+        method: 'PATCH',
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setErro(data.error || 'Erro ao reverter cancelamento')
+        return
+      }
+      window.location.href = window.location.href
+    } catch {
+      setErro('Erro de conexão')
+    } finally {
+      setCarregando(false)
+    }
+  }
+
   async function copiarMensagem(mensagem: string) {
     await navigator.clipboard.writeText(mensagem).catch(() => {})
     setCopiado(true)
@@ -281,6 +301,19 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole, linkGrupoContrato 
                 ))}
               </div>
             </div>
+
+            {pedido.status === 'CANCELADO' && sessaoRole === 'ADMIN' && (
+              <div className="flex flex-col gap-2 pt-2">
+                <button
+                  onClick={reverterCancelamento}
+                  disabled={carregando}
+                  className="w-full border border-amber-300 text-amber-700 py-2 rounded-lg hover:bg-amber-50 text-sm font-medium disabled:opacity-50"
+                >
+                  {carregando ? 'Revertendo...' : 'Reverter Cancelamento'}
+                </button>
+                {erro && <p className="text-red-600 text-sm">{erro}</p>}
+              </div>
+            )}
 
             {pedido.status !== 'CANCELADO' && (
               <div className="flex flex-col gap-2 pt-2">

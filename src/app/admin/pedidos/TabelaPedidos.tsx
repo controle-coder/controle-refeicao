@@ -167,6 +167,26 @@ export function TabelaPedidos({ pedidos, adminId, adminNome, readonly = false }:
     }
   }
 
+  async function reverterCancelamento() {
+    if (!selecionado) return
+    if (!confirm('Deseja reverter o cancelamento deste pedido? Ele voltará ao status ABERTO.')) return
+    setCarregando(true)
+    setErro('')
+    try {
+      const res = await fetch(`/api/pedidos/${selecionado.id}/reverter-cancelamento`, {
+        method: 'PATCH',
+      })
+      const data = await res.json()
+      if (!res.ok) { setErro(data.error || 'Erro ao reverter'); return }
+      setLista((prev) => prev.map((p) => (p.id === selecionado.id ? data : p)))
+      setSelecionado(data)
+    } catch {
+      setErro('Erro de conexão')
+    } finally {
+      setCarregando(false)
+    }
+  }
+
   async function confirmarCancelamento() {
     if (!selecionado) return
     if (motivo.trim().length < 5) {
@@ -393,6 +413,15 @@ export function TabelaPedidos({ pedidos, adminId, adminNome, readonly = false }:
                     Cancelar
                   </button>
                 </>
+              )}
+              {!readonly && selecionado.status === 'CANCELADO' && (
+                <button
+                  onClick={reverterCancelamento}
+                  disabled={carregando}
+                  className="flex-1 border border-amber-300 text-amber-700 py-2 rounded-lg hover:bg-amber-50 text-sm font-medium disabled:opacity-50"
+                >
+                  {carregando ? 'Revertendo...' : 'Reverter Cancelamento'}
+                </button>
               )}
             </div>
           </div>
