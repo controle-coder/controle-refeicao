@@ -7,7 +7,6 @@ export default async function AdminPedidosPage() {
 
   const pedidos = await prisma.pedido.findMany({
     orderBy: { criadoEm: 'desc' },
-    take: 100,
     include: {
       restaurante: true,
       fazenda: true,

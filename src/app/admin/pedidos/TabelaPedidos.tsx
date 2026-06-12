@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 
 const STATUS_LABELS: Record<string, string> = {
   ABERTO: 'Aberto',
@@ -72,10 +72,19 @@ interface Props {
 
 type Modal = 'detalhe' | 'cancelar' | 'editar'
 
+const POR_PAGINA = 25
+
 export function TabelaPedidos({ pedidos, adminId, adminNome, readonly = false }: Props) {
   const [lista, setLista] = useState<Pedido[]>(pedidos)
   const [selecionado, setSelecionado] = useState<Pedido | null>(null)
   const [modal, setModal] = useState<Modal>('detalhe')
+
+  // filtros
+  const [busca, setBusca] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState<string>('')
+  const [filtroDataDe, setFiltroDataDe] = useState('')
+  const [filtroDataAte, setFiltroDataAte] = useState('')
+  const [pagina, setPagina] = useState(1)
 
   // cancelar
   const [motivo, setMotivo] = useState('')
@@ -88,6 +97,58 @@ export function TabelaPedidos({ pedidos, adminId, adminNome, readonly = false }:
 
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
+
+  const filtrados = useMemo(() => {
+    let resultado = lista
+
+    if (filtroStatus) {
+      resultado = resultado.filter((p) => p.status === filtroStatus)
+    }
+
+    if (filtroDataDe) {
+      const de = new Date(filtroDataDe + 'T00:00:00Z')
+      resultado = resultado.filter((p) => {
+        const d = new Date(p.dataRefeicao ?? p.criadoEm)
+        return d >= de
+      })
+    }
+
+    if (filtroDataAte) {
+      const ate = new Date(filtroDataAte + 'T23:59:59Z')
+      resultado = resultado.filter((p) => {
+        const d = new Date(p.dataRefeicao ?? p.criadoEm)
+        return d <= ate
+      })
+    }
+
+    if (busca.trim()) {
+      const termo = busca.trim().toLowerCase()
+      resultado = resultado.filter((p) => {
+        const id = `#${p.id}`
+        const restaurante = p.restaurante.nome.toLowerCase()
+        const fazenda = p.fazenda?.nome?.toLowerCase() ?? ''
+        const turma = p.turma?.nome?.toLowerCase() ?? ''
+        const req = nomeRequisitantePedido(p).toLowerCase()
+        return (
+          id.includes(termo) ||
+          restaurante.includes(termo) ||
+          fazenda.includes(termo) ||
+          turma.includes(termo) ||
+          req.includes(termo)
+        )
+      })
+    }
+
+    return resultado
+  }, [lista, busca, filtroStatus, filtroDataDe, filtroDataAte])
+
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA))
+  const paginaAtual = Math.min(pagina, totalPaginas)
+  const paginados = filtrados.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA)
+
+  function mudaFiltro() {
+    setPagina(1)
+  }
 
   const versaoAtual = selecionado
     ? selecionado.versoes.find((v) => v.numero === selecionado.versaoAtual)
@@ -220,6 +281,57 @@ export function TabelaPedidos({ pedidos, adminId, adminNome, readonly = false }:
 
   return (
     <>
+      {/* ── Filtros ── */}
+      <div className="p-4 border-b border-gray-100 space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => { setBusca(e.target.value); mudaFiltro() }}
+            placeholder="Buscar por #, restaurante, fazenda, turma, requisitante..."
+            className="flex-1 min-w-[200px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+          <select
+            value={filtroStatus}
+            onChange={(e) => { setFiltroStatus(e.target.value); mudaFiltro() }}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="">Todos os status</option>
+            <option value="ABERTO">Aberto</option>
+            <option value="ENVIADO">Enviado</option>
+            <option value="CONFIRMADO">Confirmado</option>
+            <option value="CANCELADO">Cancelado</option>
+          </select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-gray-500">Data refeicao:</span>
+          <input
+            type="date"
+            value={filtroDataDe}
+            onChange={(e) => { setFiltroDataDe(e.target.value); mudaFiltro() }}
+            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+          <span className="text-gray-400">ate</span>
+          <input
+            type="date"
+            value={filtroDataAte}
+            onChange={(e) => { setFiltroDataAte(e.target.value); mudaFiltro() }}
+            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+          {(busca || filtroStatus || filtroDataDe || filtroDataAte) && (
+            <button
+              onClick={() => { setBusca(''); setFiltroStatus(''); setFiltroDataDe(''); setFiltroDataAte(''); mudaFiltro() }}
+              className="text-xs text-gray-500 hover:text-gray-700 underline ml-1"
+            >
+              Limpar filtros
+            </button>
+          )}
+          <span className="ml-auto text-xs text-gray-400">
+            {filtrados.length} pedido{filtrados.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+
       <table className="w-full text-sm">
         <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
           <tr>
@@ -233,7 +345,7 @@ export function TabelaPedidos({ pedidos, adminId, adminNome, readonly = false }:
           </tr>
         </thead>
         <tbody>
-          {lista.map((p) => {
+          {paginados.map((p) => {
             const vAtual = p.versoes.find((v) => v.numero === p.versaoAtual) ?? p.versoes[p.versoes.length - 1]
             const totalItens = vAtual?.itens.reduce((s, i) => s + i.quantidade, 0) ?? 0
             return (
@@ -262,7 +374,53 @@ export function TabelaPedidos({ pedidos, adminId, adminNome, readonly = false }:
         </tbody>
       </table>
 
-      {lista.length === 0 && <p className="text-center text-gray-400 py-8">Nenhum pedido</p>}
+      {paginados.length === 0 && (
+        <p className="text-center text-gray-400 py-8">
+          {lista.length === 0 ? 'Nenhum pedido' : 'Nenhum pedido encontrado com os filtros aplicados'}
+        </p>
+      )}
+
+      {/* ── Paginação ── */}
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+          <span className="text-xs text-gray-500">
+            {(paginaAtual - 1) * POR_PAGINA + 1}–{Math.min(paginaAtual * POR_PAGINA, filtrados.length)} de {filtrados.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPagina(1)}
+              disabled={paginaAtual <= 1}
+              className="px-2 py-1 text-xs rounded border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              &laquo;
+            </button>
+            <button
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              disabled={paginaAtual <= 1}
+              className="px-2 py-1 text-xs rounded border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              &lsaquo;
+            </button>
+            <span className="px-3 py-1 text-xs font-medium text-gray-700">
+              {paginaAtual} / {totalPaginas}
+            </span>
+            <button
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              disabled={paginaAtual >= totalPaginas}
+              className="px-2 py-1 text-xs rounded border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              &rsaquo;
+            </button>
+            <button
+              onClick={() => setPagina(totalPaginas)}
+              disabled={paginaAtual >= totalPaginas}
+              className="px-2 py-1 text-xs rounded border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              &raquo;
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal detalhe ── */}
       {selecionado && modal === 'detalhe' && (
