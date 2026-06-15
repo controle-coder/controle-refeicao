@@ -28,6 +28,9 @@ export function GerenciarRequisitantes({
   })
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
+  const [abaAtiva, setAbaAtiva] = useState<'ativos' | 'inativos'>('ativos')
+
+  const itensFiltrados = items.filter((i) => abaAtiva === 'ativos' ? i.ativo : !i.ativo)
 
   const turmasFiltradas = form.fazendaId ? turmas.filter((t) => t.fazendaId === form.fazendaId) : turmas
 
@@ -101,7 +104,25 @@ export function GerenciarRequisitantes({
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setAbaAtiva('ativos')}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              abaAtiva === 'ativos' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Ativos ({items.filter((i) => i.ativo).length})
+          </button>
+          <button
+            onClick={() => setAbaAtiva('inativos')}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              abaAtiva === 'inativos' ? 'bg-white text-gray-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Inativos ({items.filter((i) => !i.ativo).length})
+          </button>
+        </div>
         <button onClick={abrirNovo} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium">
           + Novo Requisitante
         </button>
@@ -120,7 +141,7 @@ export function GerenciarRequisitantes({
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {itensFiltrados.map((item) => (
               <tr key={item.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-800">{item.nome}</td>
                 <td className="px-4 py-3 text-gray-500">{item.login}</td>
@@ -162,7 +183,11 @@ export function GerenciarRequisitantes({
             ))}
           </tbody>
         </table>
-        {items.length === 0 && <p className="text-center text-gray-400 py-8">Nenhum requisitante cadastrado</p>}
+        {itensFiltrados.length === 0 && (
+          <p className="text-center text-gray-400 py-8">
+            {abaAtiva === 'ativos' ? 'Nenhum requisitante ativo' : 'Nenhum requisitante inativo'}
+          </p>
+        )}
       </div>
 
       {modalAberto && (
