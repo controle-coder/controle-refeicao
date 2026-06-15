@@ -11,10 +11,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Instalar PostgreSQL client
+      - name: Instalar PostgreSQL 17 client
+        # O servidor Neon roda PostgreSQL 17; o pg_dump precisa ser >= a versão do servidor.
+        # O postgresql-client padrão do Ubuntu é o 16, que falha com "server version mismatch".
+        # Por isso instalamos o cliente 17 do repositório oficial PGDG.
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client
+          sudo apt-get install -y -qq curl ca-certificates lsb-release
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          pg_dump --version
 
       - name: Gerar backup via pg_dump
         env:
