@@ -23,15 +23,22 @@ jobs:
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client-17
-          pg_dump --version
+          # O runner já traz o client 16, e o wrapper /usr/bin/pg_dump continua
+          # apontando para ele. Por isso usamos o binário 17 pelo caminho absoluto.
+          /usr/lib/postgresql/17/bin/pg_dump --version
 
       - name: Gerar backup via pg_dump
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "ERRO: secret DATABASE_URL não está configurado no repositório."
+            echo "Configure em: Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
           TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
           FILENAME="backup_${TIMESTAMP}.sql"
-          pg_dump "$DATABASE_URL" \
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" \
             --no-owner \
             --no-privileges \
             --clean \
