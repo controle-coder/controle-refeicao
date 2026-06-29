@@ -8,12 +8,16 @@ const TIPOS_REFEICAO: { valor: TipoRefeicao; label: string }[] = [
   { valor: 'CAFE_MANHA', label: 'Café da Manhã' },
   { valor: 'ALMOCO', label: 'Almoço' },
   { valor: 'JANTAR', label: 'Jantar' },
+  { valor: 'ALMOCO_SELF', label: 'Almoço Self Service' },
+  { valor: 'JANTAR_SELF', label: 'Jantar Self Service' },
 ]
 
 const TIPO_LABELS: Record<TipoRefeicao, string> = {
   CAFE_MANHA: 'Café da Manhã',
   ALMOCO: 'Almoço',
   JANTAR: 'Jantar',
+  ALMOCO_SELF: 'Almoço Self Service',
+  JANTAR_SELF: 'Jantar Self Service',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -52,7 +56,7 @@ interface Pedido {
   versaoAtual: number
   criadoEm: Date | string
   dataRefeicao: Date | string
-  restaurante: { id: number; nome: string; telefone: string; linkGrupoWhatsApp?: string | null; precoCafeManha?: number | null; precoAlmoco?: number | null; precoJantar?: number | null }
+  restaurante: { id: number; nome: string; telefone: string; linkGrupoWhatsApp?: string | null; precoCafeManha?: number | null; precoAlmoco?: number | null; precoJantar?: number | null; precoAlmocoSelf?: number | null; precoJantarSelf?: number | null }
   fazenda: { nome: string } | null
   turma: { nome: string } | null
   requisitante: { nome: string } | null
@@ -105,9 +109,11 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole, linkGrupoContrato 
     const ano = ref.getUTCFullYear()
     const mes = ref.getUTCMonth()
     const dia = ref.getUTCDate()
-    if (tipo === 'CAFE_MANHA') return agora >= new Date(ano, mes, dia, 5, 0)
-    if (tipo === 'ALMOCO')     return agora >= new Date(ano, mes, dia, 12, 0)
-    if (tipo === 'JANTAR')     return agora >= new Date(ano, mes, dia, 19, 0)
+    if (tipo === 'CAFE_MANHA')  return agora >= new Date(ano, mes, dia, 5, 0)
+    if (tipo === 'ALMOCO')      return agora >= new Date(ano, mes, dia, 12, 0)
+    if (tipo === 'JANTAR')      return agora >= new Date(ano, mes, dia, 19, 0)
+    if (tipo === 'ALMOCO_SELF') return agora >= new Date(ano, mes, dia, 12, 0)
+    if (tipo === 'JANTAR_SELF') return agora >= new Date(ano, mes, dia, 19, 0)
     return false
   }
 
@@ -337,7 +343,7 @@ export function DetalhePedido({ pedido, sessaoId, sessaoRole, linkGrupoContrato 
                   <p className="text-xs text-gray-400 text-center py-1">
                     {versaoAtual?.itens.some((i) => i.tipoRefeicao === 'CAFE_MANHA')
                       ? 'Prazo de edição do Café da Manhã encerrado às 5:00 do dia da retirada'
-                      : versaoAtual?.itens.some((i) => i.tipoRefeicao === 'ALMOCO')
+                      : versaoAtual?.itens.some((i) => i.tipoRefeicao === 'ALMOCO' || i.tipoRefeicao === 'ALMOCO_SELF')
                       ? 'Prazo de edição do Almoço encerrado às 12:00 do dia da retirada'
                       : 'Prazo de edição do Jantar encerrado às 19:00 do dia da retirada'}
                   </p>

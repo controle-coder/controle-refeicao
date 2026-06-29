@@ -4,9 +4,11 @@ import { useState, useEffect, useRef } from 'react'
 import { TipoRefeicao } from '@/generated/prisma/enums'
 
 const TIPOS_REFEICAO: { valor: TipoRefeicao; label: string; pedidoAte: number }[] = [
-  { valor: 'CAFE_MANHA', label: 'Café da Manhã', pedidoAte: 5 * 60 },
-  { valor: 'ALMOCO',     label: 'Almoço',        pedidoAte: 12 * 60 },
-  { valor: 'JANTAR',     label: 'Jantar',         pedidoAte: 19 * 60 },
+  { valor: 'CAFE_MANHA',  label: 'Café da Manhã',         pedidoAte: 5 * 60 },
+  { valor: 'ALMOCO',      label: 'Almoço',                pedidoAte: 12 * 60 },
+  { valor: 'JANTAR',      label: 'Jantar',                pedidoAte: 19 * 60 },
+  { valor: 'ALMOCO_SELF', label: 'Almoço Self Service',   pedidoAte: 12 * 60 },
+  { valor: 'JANTAR_SELF', label: 'Jantar Self Service',   pedidoAte: 19 * 60 },
 ]
 
 function minutosAgora() {
@@ -34,9 +36,11 @@ function podeEditarPedido(dataRefeicao: string, tipos: string[], status: string)
   const dia = ref.getUTCDate()
 
   for (const tipo of tipos) {
-    if (tipo === 'CAFE_MANHA' && agora >= new Date(ano, mes, dia, 5, 0))  return false
-    if (tipo === 'ALMOCO'     && agora >= new Date(ano, mes, dia, 12, 0)) return false
-    if (tipo === 'JANTAR'     && agora >= new Date(ano, mes, dia, 19, 0)) return false
+    if (tipo === 'CAFE_MANHA'  && agora >= new Date(ano, mes, dia, 5, 0))  return false
+    if (tipo === 'ALMOCO'      && agora >= new Date(ano, mes, dia, 12, 0)) return false
+    if (tipo === 'JANTAR'      && agora >= new Date(ano, mes, dia, 19, 0)) return false
+    if (tipo === 'ALMOCO_SELF' && agora >= new Date(ano, mes, dia, 12, 0)) return false
+    if (tipo === 'JANTAR_SELF' && agora >= new Date(ano, mes, dia, 19, 0)) return false
   }
   return true
 }
@@ -59,6 +63,8 @@ const TIPO_LABELS: Record<string, string> = {
   CAFE_MANHA: 'Café da Manhã',
   ALMOCO: 'Almoço',
   JANTAR: 'Jantar',
+  ALMOCO_SELF: 'Almoço Self Service',
+  JANTAR_SELF: 'Jantar Self Service',
 }
 
 interface Restaurante { id: number; nome: string; telefone: string }

@@ -11,6 +11,8 @@ interface PrecoContrato {
   precoCafeManha: number | null
   precoAlmoco: number | null
   precoJantar: number | null
+  precoAlmocoSelf: number | null
+  precoJantarSelf: number | null
   linkGrupoWhatsApp: string | null
 }
 interface Contrato {
@@ -32,6 +34,8 @@ interface PrecoForm {
   precoCafeManha: string
   precoAlmoco: string
   precoJantar: string
+  precoAlmocoSelf: string
+  precoJantarSelf: string
   linkGrupoWhatsApp: string
 }
 
@@ -84,6 +88,8 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
         precoCafeManha: p.precoCafeManha != null ? String(p.precoCafeManha) : '',
         precoAlmoco: p.precoAlmoco != null ? String(p.precoAlmoco) : '',
         precoJantar: p.precoJantar != null ? String(p.precoJantar) : '',
+        precoAlmocoSelf: p.precoAlmocoSelf != null ? String(p.precoAlmocoSelf) : '',
+        precoJantarSelf: p.precoJantarSelf != null ? String(p.precoJantarSelf) : '',
         linkGrupoWhatsApp: p.linkGrupoWhatsApp ?? '',
       }
     }
@@ -107,7 +113,7 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
   function setPrecoField(restId: number, field: keyof PrecoForm, value: string) {
     setPrecos((prev) => ({
       ...prev,
-      [restId]: { ...(prev[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '', linkGrupoWhatsApp: '' }), [field]: value },
+      [restId]: { ...(prev[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '', precoAlmocoSelf: '', precoJantarSelf: '', linkGrupoWhatsApp: '' }), [field]: value },
     }))
   }
 
@@ -116,12 +122,14 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
     setCarregando(true)
     try {
       const precosArray = form.restauranteIds.map((restId) => {
-        const p = precos[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '', linkGrupoWhatsApp: '' }
+        const p = precos[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '', precoAlmocoSelf: '', precoJantarSelf: '', linkGrupoWhatsApp: '' }
         return {
           restauranteId: restId,
           precoCafeManha: parsePreco(p.precoCafeManha),
           precoAlmoco: parsePreco(p.precoAlmoco),
           precoJantar: parsePreco(p.precoJantar),
+          precoAlmocoSelf: parsePreco(p.precoAlmocoSelf),
+          precoJantarSelf: parsePreco(p.precoJantarSelf),
           linkGrupoWhatsApp: p.linkGrupoWhatsApp.trim() || null,
         }
       })
@@ -223,7 +231,7 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
                     {item.restaurantes.map((r) => {
                       const pc = item.precosContrato.find((p) => p.restauranteId === r.id)
                       const precoStr = pc
-                        ? [pc.precoCafeManha, pc.precoAlmoco, pc.precoJantar].filter((v) => v != null).map((v) => `R$${v!.toFixed(2).replace('.', ',')}`).join(' / ')
+                        ? [pc.precoCafeManha, pc.precoAlmoco, pc.precoJantar, pc.precoAlmocoSelf, pc.precoJantarSelf].filter((v) => v != null).map((v) => `R$${v!.toFixed(2).replace('.', ',')}`).join(' / ')
                         : null
                       return (
                         <span key={r.id} className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
@@ -320,7 +328,7 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
                 <div className="border border-gray-200 rounded-lg divide-y">
                   {form.restauranteIds.map((restId) => {
                     const rest = restaurantes.find((r) => r.id === restId)
-                    const p = precos[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '', linkGrupoWhatsApp: '' }
+                    const p = precos[restId] ?? { precoCafeManha: '', precoAlmoco: '', precoJantar: '', precoAlmocoSelf: '', precoJantarSelf: '', linkGrupoWhatsApp: '' }
                     return (
                       <div key={restId} className="px-3 py-2 space-y-1.5">
                         <p className="text-sm font-medium text-gray-700">{rest?.nome}</p>
@@ -329,6 +337,8 @@ export function GerenciarContratos({ initial, fazendas, restaurantes, turmas }: 
                             { label: 'Cafe', field: 'precoCafeManha' as const },
                             { label: 'Almoco', field: 'precoAlmoco' as const },
                             { label: 'Jantar', field: 'precoJantar' as const },
+                            { label: 'Almoco Self', field: 'precoAlmocoSelf' as const },
+                            { label: 'Jantar Self', field: 'precoJantarSelf' as const },
                           ]).map(({ label, field }) => (
                             <div key={field}>
                               <label className="block text-[10px] text-gray-400 mb-0.5">{label}</label>

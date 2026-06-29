@@ -39,9 +39,10 @@ export async function GET() {
       const key = p.dataRefeicao.toISOString().split('T')[0]
       if (!porDia[key]) return
       p.versoes[0]?.itens.forEach((item) => {
+        // Self service entra no headcount do almoço/jantar correspondente
         if (item.tipoRefeicao === 'CAFE_MANHA') porDia[key].cafe += item.quantidade
-        else if (item.tipoRefeicao === 'ALMOCO') porDia[key].almoco += item.quantidade
-        else if (item.tipoRefeicao === 'JANTAR') porDia[key].jantar += item.quantidade
+        else if (item.tipoRefeicao === 'ALMOCO' || item.tipoRefeicao === 'ALMOCO_SELF') porDia[key].almoco += item.quantidade
+        else if (item.tipoRefeicao === 'JANTAR' || item.tipoRefeicao === 'JANTAR_SELF') porDia[key].jantar += item.quantidade
       })
     })
 

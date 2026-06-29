@@ -52,6 +52,8 @@ model PrecoContrato {
   precoCafeManha    Float?
   precoAlmoco       Float?
   precoJantar       Float?
+  precoAlmocoSelf   Float?
+  precoJantarSelf   Float?
   linkGrupoWhatsApp String?     // link do grupo WhatsApp específico deste contrato+restaurante
 
   @@unique([contratoId, restauranteId])
@@ -181,4 +183,6 @@ enum TipoRefeicao {
   CAFE_MANHA
   ALMOCO
   JANTAR
+  ALMOCO_SELF
+  JANTAR_SELF
 }

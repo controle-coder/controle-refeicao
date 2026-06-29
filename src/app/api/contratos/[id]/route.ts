@@ -8,6 +8,8 @@ const precoSchema = z.object({
   precoCafeManha: z.number().nonnegative().nullable().optional(),
   precoAlmoco: z.number().nonnegative().nullable().optional(),
   precoJantar: z.number().nonnegative().nullable().optional(),
+  precoAlmocoSelf: z.number().nonnegative().nullable().optional(),
+  precoJantarSelf: z.number().nonnegative().nullable().optional(),
   linkGrupoWhatsApp: z.string().nullable().optional(),
 })
 
@@ -50,6 +52,8 @@ export async function PUT(request: NextRequest, ctx: RouteContext<'/api/contrato
             precoCafeManha: p.precoCafeManha ?? null,
             precoAlmoco: p.precoAlmoco ?? null,
             precoJantar: p.precoJantar ?? null,
+            precoAlmocoSelf: p.precoAlmocoSelf ?? null,
+            precoJantarSelf: p.precoJantarSelf ?? null,
             linkGrupoWhatsApp: p.linkGrupoWhatsApp ?? null,
           })),
         })

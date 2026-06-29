@@ -18,13 +18,17 @@ const TIPO_LABELS: Record<string, string> = {
   CAFE_MANHA: 'Café da Manhã',
   ALMOCO: 'Almoço',
   JANTAR: 'Jantar',
+  ALMOCO_SELF: 'Almoço Self Service',
+  JANTAR_SELF: 'Jantar Self Service',
 }
 const TIPO_EMOJI: Record<string, string> = {
   CAFE_MANHA: '☕',
   ALMOCO: '🍽️',
   JANTAR: '🌙',
+  ALMOCO_SELF: '🍴',
+  JANTAR_SELF: '🍴',
 }
-const TIPOS = ['CAFE_MANHA', 'ALMOCO', 'JANTAR'] as const
+const TIPOS = ['CAFE_MANHA', 'ALMOCO', 'JANTAR', 'ALMOCO_SELF', 'JANTAR_SELF'] as const
 
 interface Item {
   id: number
@@ -90,7 +94,7 @@ export function TabelaPedidos({ pedidos, adminId, adminNome, readonly = false }:
   const [motivo, setMotivo] = useState('')
 
   // editar
-  const [qtds, setQtds] = useState<Record<string, number>>({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 })
+  const [qtds, setQtds] = useState<Record<string, number>>({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0, ALMOCO_SELF: 0, JANTAR_SELF: 0 })
   const [novaData, setNovaData] = useState('')
   const [motivoEdicao, setMotivoEdicao] = useState('')
   const [historicoAberto, setHistoricoAberto] = useState(false)
@@ -183,7 +187,7 @@ export function TabelaPedidos({ pedidos, adminId, adminNome, readonly = false }:
 
   function abrirEditar() {
     if (!versaoAtual) return
-    const mapa: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 }
+    const mapa: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0, ALMOCO_SELF: 0, JANTAR_SELF: 0 }
     for (const item of versaoAtual.itens) mapa[item.tipoRefeicao] = item.quantidade
     setQtds(mapa)
     setNovaData(toInputDate(selecionado?.dataRefeicao))

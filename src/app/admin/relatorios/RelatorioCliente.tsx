@@ -9,6 +9,8 @@ const TIPO_LABELS: Record<string, string> = {
   CAFE_MANHA: 'Café da Manhã',
   ALMOCO: 'Almoço',
   JANTAR: 'Jantar',
+  ALMOCO_SELF: 'Almoço Self Service',
+  JANTAR_SELF: 'Jantar Self Service',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -44,6 +46,8 @@ interface PrecoContrato {
   precoCafeManha: number | null
   precoAlmoco: number | null
   precoJantar: number | null
+  precoAlmocoSelf: number | null
+  precoJantarSelf: number | null
 }
 interface ItemRefeicao { tipoRefeicao: string; quantidade: number; observacao?: string | null }
 interface Versao { itens: ItemRefeicao[] }
@@ -71,6 +75,8 @@ function precoDoItem(pedido: Pedido, tipo: string): number | null {
     CAFE_MANHA: pc.precoCafeManha,
     ALMOCO: pc.precoAlmoco,
     JANTAR: pc.precoJantar,
+    ALMOCO_SELF: pc.precoAlmocoSelf,
+    JANTAR_SELF: pc.precoJantarSelf,
   }
   return mapa[tipo] ?? null
 }

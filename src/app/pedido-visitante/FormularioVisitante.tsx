@@ -6,6 +6,8 @@ const TIPOS_REFEICAO = [
   { valor: 'CAFE_MANHA', label: 'Café da Manhã' },
   { valor: 'ALMOCO', label: 'Almoço' },
   { valor: 'JANTAR', label: 'Jantar' },
+  { valor: 'ALMOCO_SELF', label: 'Almoço Self Service' },
+  { valor: 'JANTAR_SELF', label: 'Jantar Self Service' },
 ]
 
 function localDateStr(offsetDias = 0): string {

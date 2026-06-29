@@ -6,12 +6,16 @@ const TIPO_LABELS: Record<string, string> = {
   CAFE_MANHA: 'Café da Manhã',
   ALMOCO: 'Almoço',
   JANTAR: 'Jantar',
+  ALMOCO_SELF: 'Almoço Self Service',
+  JANTAR_SELF: 'Jantar Self Service',
 }
 
 const TIPO_ORDEM: Record<string, number> = {
   CAFE_MANHA: 0,
   ALMOCO: 1,
   JANTAR: 2,
+  ALMOCO_SELF: 3,
+  JANTAR_SELF: 4,
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -67,6 +71,8 @@ interface PrecoContrato {
   precoCafeManha: number | null
   precoAlmoco: number | null
   precoJantar: number | null
+  precoAlmocoSelf: number | null
+  precoJantarSelf: number | null
   contrato: { id: number; nome: string }
 }
 
@@ -86,6 +92,8 @@ function buscarPreco(precosContrato: PrecoContrato[], contratoIds: number[], tip
         CAFE_MANHA: pc.precoCafeManha,
         ALMOCO: pc.precoAlmoco,
         JANTAR: pc.precoJantar,
+        ALMOCO_SELF: pc.precoAlmocoSelf,
+        JANTAR_SELF: pc.precoJantarSelf,
       }
       return mapa[tipoRefeicao] ?? null
     }
@@ -127,7 +135,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
 
   // editar pedido
   const [editandoId, setEditandoId] = useState<number | null>(null)
-  const [qtdsEditar, setQtdsEditar] = useState<Record<string, number>>({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 })
+  const [qtdsEditar, setQtdsEditar] = useState<Record<string, number>>({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0, ALMOCO_SELF: 0, JANTAR_SELF: 0 })
   const [obsEditar, setObsEditar] = useState('')
   const [erroEditar, setErroEditar] = useState('')
   const [carregandoEditar, setCarregandoEditar] = useState(false)
@@ -152,7 +160,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
   const [avulsoData, setAvulsoData] = useState(localDateStr(0))
   const [avulsoFazendaId, setAvulsoFazendaId] = useState<number | ''>('')
   const [avulsoTurmaId, setAvulsoTurmaId] = useState<number | ''>('')
-  const [avulsoQtds, setAvulsoQtds] = useState<Record<string, number>>({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 })
+  const [avulsoQtds, setAvulsoQtds] = useState<Record<string, number>>({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0, ALMOCO_SELF: 0, JANTAR_SELF: 0 })
   const [erroAvulso, setErroAvulso] = useState('')
   const [carregandoAvulso, setCarregandoAvulso] = useState(false)
 
@@ -222,7 +230,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
     const dataFormatada = formatarData(data + 'T12:00:00Z')
 
-    const totaisLocal: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 }
+    const totaisLocal: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0, ALMOCO_SELF: 0, JANTAR_SELF: 0 }
     pedidos.forEach((p) => p.versoes[0]?.itens.forEach((i) => {
       totaisLocal[i.tipoRefeicao] = (totaisLocal[i.tipoRefeicao] ?? 0) + i.quantidade
     }))
@@ -241,7 +249,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(0)
-    doc.text(`Total: ${totalLocal}   Cafe: ${totaisLocal.CAFE_MANHA}   Almoco: ${totaisLocal.ALMOCO}   Jantar: ${totaisLocal.JANTAR}`, 15, 34)
+    doc.text(`Total: ${totalLocal}   Cafe: ${totaisLocal.CAFE_MANHA}   Almoco: ${totaisLocal.ALMOCO}   Jantar: ${totaisLocal.JANTAR}   Almoco Self: ${totaisLocal.ALMOCO_SELF}   Jantar Self: ${totaisLocal.JANTAR_SELF}`, 15, 34)
 
     doc.setDrawColor(200)
     doc.line(15, 39, 195, 39)
@@ -310,12 +318,12 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
 
       const temPrecoLocal = restaurante.precosContrato.length > 0
 
-      const cabecalho = ['Data', 'Fazenda', 'Turma', 'Requisitante', 'Café da Manhã', 'Almoço', 'Jantar', 'Total', ...(temPrecoLocal ? ['Valor (R$)'] : []), 'Status', 'Horário']
+      const cabecalho = ['Data', 'Fazenda', 'Turma', 'Requisitante', 'Café da Manhã', 'Almoço', 'Jantar', 'Almoço Self Service', 'Jantar Self Service', 'Total', ...(temPrecoLocal ? ['Valor (R$)'] : []), 'Status', 'Horário']
 
       const linhas = dados.map((p: Pedido) => {
-        const itensMap: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 }
+        const itensMap: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0, ALMOCO_SELF: 0, JANTAR_SELF: 0 }
         p.versoes[0]?.itens.forEach((i) => { itensMap[i.tipoRefeicao] = i.quantidade })
-        const total = itensMap.CAFE_MANHA + itensMap.ALMOCO + itensMap.JANTAR
+        const total = itensMap.CAFE_MANHA + itensMap.ALMOCO + itensMap.JANTAR + itensMap.ALMOCO_SELF + itensMap.JANTAR_SELF
         const dataFmt = formatarData(p.dataRefeicao)
         const fazenda = p.fazenda?.nome ?? ''
         const turma = p.turma?.nome ?? ''
@@ -323,12 +331,12 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
         const status = STATUS_LABELS[p.status] ?? p.status
         const hora = formatarHora(p.atualizadoEm)
 
-        const cols = [dataFmt, fazenda, turma, req, itensMap.CAFE_MANHA, itensMap.ALMOCO, itensMap.JANTAR, total]
+        const cols = [dataFmt, fazenda, turma, req, itensMap.CAFE_MANHA, itensMap.ALMOCO, itensMap.JANTAR, itensMap.ALMOCO_SELF, itensMap.JANTAR_SELF, total]
 
         if (temPrecoLocal) {
           const contratoIds = p.contratoId != null ? [p.contratoId] : []
           let valor = 0
-          for (const tipo of ['CAFE_MANHA', 'ALMOCO', 'JANTAR']) {
+          for (const tipo of ['CAFE_MANHA', 'ALMOCO', 'JANTAR', 'ALMOCO_SELF', 'JANTAR_SELF']) {
             const preco = buscarPreco(restaurante.precosContrato, contratoIds, tipo)
             if (preco != null) valor += preco * itensMap[tipo]
           }
@@ -357,7 +365,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
 
   async function compartilharWhatsApp() {
     const dataFormatada = formatarData(data + 'T12:00:00Z')
-    const totaisLocal: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 }
+    const totaisLocal: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0, ALMOCO_SELF: 0, JANTAR_SELF: 0 }
     pedidos.forEach((p) => p.versoes[0]?.itens.forEach((i) => {
       totaisLocal[i.tipoRefeicao] = (totaisLocal[i.tipoRefeicao] ?? 0) + i.quantidade
     }))
@@ -365,9 +373,11 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
 
     let texto = `*${restaurante.nome}*\n📅 ${dataFormatada}\n\n`
     texto += `📊 *Resumo do dia*\nTotal: *${totalLocal}* refeições\n`
-    if (totaisLocal.CAFE_MANHA > 0) texto += `☕ Café da Manhã: *${totaisLocal.CAFE_MANHA}*\n`
-    if (totaisLocal.ALMOCO > 0)     texto += `🍽️ Almoço: *${totaisLocal.ALMOCO}*\n`
-    if (totaisLocal.JANTAR > 0)     texto += `🌙 Jantar: *${totaisLocal.JANTAR}*\n`
+    if (totaisLocal.CAFE_MANHA > 0)  texto += `☕ Café da Manhã: *${totaisLocal.CAFE_MANHA}*\n`
+    if (totaisLocal.ALMOCO > 0)      texto += `🍽️ Almoço: *${totaisLocal.ALMOCO}*\n`
+    if (totaisLocal.JANTAR > 0)      texto += `🌙 Jantar: *${totaisLocal.JANTAR}*\n`
+    if (totaisLocal.ALMOCO_SELF > 0) texto += `🍴 Almoço Self Service: *${totaisLocal.ALMOCO_SELF}*\n`
+    if (totaisLocal.JANTAR_SELF > 0) texto += `🍴 Jantar Self Service: *${totaisLocal.JANTAR_SELF}*\n`
 
     if (pedidos.length > 0) {
       texto += `\n*Pedidos:*\n`
@@ -390,11 +400,11 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
     }
   }
 
-  const TIPOS = ['CAFE_MANHA', 'ALMOCO', 'JANTAR'] as const
+  const TIPOS = ['CAFE_MANHA', 'ALMOCO', 'JANTAR', 'ALMOCO_SELF', 'JANTAR_SELF'] as const
 
 
   function abrirEditar(pedido: Pedido) {
-    const mapa: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 }
+    const mapa: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0, ALMOCO_SELF: 0, JANTAR_SELF: 0 }
     for (const item of pedido.versoes[0]?.itens ?? []) mapa[item.tipoRefeicao] = item.quantidade
     setQtdsEditar(mapa)
     setObsEditar('')
@@ -434,7 +444,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
     setAvulsoData(data)
     setAvulsoFazendaId('')
     setAvulsoTurmaId('')
-    setAvulsoQtds({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 })
+    setAvulsoQtds({ CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0, ALMOCO_SELF: 0, JANTAR_SELF: 0 })
     setErroAvulso('')
     setModalAvulso(true)
   }
@@ -475,7 +485,7 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
   }
 
   // Totais consolidados por tipo
-  const totais: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0 }
+  const totais: Record<string, number> = { CAFE_MANHA: 0, ALMOCO: 0, JANTAR: 0, ALMOCO_SELF: 0, JANTAR_SELF: 0 }
   pedidos.forEach((p) => {
     p.versoes[0]?.itens.forEach((i) => {
       totais[i.tipoRefeicao] = (totais[i.tipoRefeicao] ?? 0) + i.quantidade
@@ -515,6 +525,8 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
           <span>Café: <strong>{totais.CAFE_MANHA}</strong></span>
           <span>Almoço: <strong>{totais.ALMOCO}</strong></span>
           <span>Jantar: <strong>{totais.JANTAR}</strong></span>
+          <span>Almoço Self: <strong>{totais.ALMOCO_SELF}</strong></span>
+          <span>Jantar Self: <strong>{totais.JANTAR_SELF}</strong></span>
         </div>
       </div>
 
@@ -629,12 +641,14 @@ export function PainelRestaurante({ restaurante, pedidosIniciais, nomeUsuario, f
         )}
 
         {/* Totais por tipo */}
-        <div className="grid grid-cols-4 gap-2 print:hidden">
+        <div className="grid grid-cols-3 gap-2 print:hidden">
           {[
             { tipo: 'TODOS', label: 'Total', valor: totalGeral },
             { tipo: 'CAFE_MANHA', label: 'Café', valor: totais.CAFE_MANHA },
             { tipo: 'ALMOCO', label: 'Almoço', valor: totais.ALMOCO },
             { tipo: 'JANTAR', label: 'Jantar', valor: totais.JANTAR },
+            { tipo: 'ALMOCO_SELF', label: 'Almoço Self', valor: totais.ALMOCO_SELF },
+            { tipo: 'JANTAR_SELF', label: 'Jantar Self', valor: totais.JANTAR_SELF },
           ].map(({ tipo, label, valor }) => (
             <button
               key={tipo}

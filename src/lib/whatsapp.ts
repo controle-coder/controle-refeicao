@@ -4,12 +4,16 @@ const LABELS_TIPO: Record<TipoRefeicao, string> = {
   CAFE_MANHA: 'Café da Manhã',
   ALMOCO: 'Almoço',
   JANTAR: 'Jantar',
+  ALMOCO_SELF: 'Almoço Self Service',
+  JANTAR_SELF: 'Jantar Self Service',
 }
 
 const EMOJIS_TIPO: Record<TipoRefeicao, string> = {
   CAFE_MANHA: '☕',
   ALMOCO: '🍽️',
   JANTAR: '🌙',
+  ALMOCO_SELF: '🍴',
+  JANTAR_SELF: '🍴',
 }
 
 export interface ItemMensagem {
